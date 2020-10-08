@@ -1,0 +1,4 @@
+*.o
+chatclient
+chatserver
+*.swp

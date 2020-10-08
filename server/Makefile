@@ -1,12 +1,12 @@
 CFLAGS=-g -c -std=c++11
-LDFLAGS=-g -lcrypto -lz
+LDFLAGS=-g -lcrypto -lz -lpthread
  
 all: chatserver
 
-myftpd: chatserver.o
+chatserver: chatserver.o
 	g++ $(LDFLAGS) -o chatserver chatserver.o
 
-myftpd.o: chatserver.cpp
+chatserver.o: chatserver.cpp
 	g++ $(CFLAGS) chatserver.cpp
 
 clean: 
