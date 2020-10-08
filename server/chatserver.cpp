@@ -5,9 +5,10 @@
 */ 
 #include <iostream>
 #include <string>
-
+#include <string.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -24,6 +25,35 @@
 
 using namespace std;
 
+/* Authenticate user */ 
+int authenticate(char* username) {
+
+	// Prepare to authenticate 
+	FILE *user_file = fopen("users.txt", "w+"); 
+	if (!user_file) {
+		perror("Could not open users file\n"); 
+		exit(-1); 
+	} 
+
+	// Check if user exists 
+	char line[MAX_SIZE];
+	char* file_user; 
+	char* password; 
+	while(fgets(line, MAX_SIZE, user_file)){
+
+		file_user = strtok(line, ","); 
+
+		// Username exists
+		if(strcmp(username, file_user) == 0) {
+			return 1; 
+		}
+	}
+
+	// Username does not exists
+	return 0; 	
+}
+
+
 /*
  * This will handle connection for each client
  * */
@@ -31,10 +61,36 @@ void *connection_handler(void *socket_desc)
 {
     int new_sockfd = *(int*) socket_desc;
     char user[MAX_SIZE];
+	char pubKey = getPubKey(); 
+
+	// Send username to server
     if(recv(new_sockfd,&user,sizeof(user),0) ==-1){
         perror("Received username error\n");
     }
     cout << "Received username : " << user << endl;
+	
+	// Check if user is authenticated
+	int user_exists = authenticate(user); 
+	if (!user_exists) {
+		cout << "Creating new user\n"; 
+	} else {
+		cout << "Existing user\n"; 
+	}
+
+	//Send public key to client
+	if(send(new_sockfd, password, strlen(password) + 1, 0) == -1) {
+		
+	}
+
+	// Get user password
+	string password; 
+	cout << "Enter password:"; 
+	cin >> password;
+
+	// Send password
+	if(send(new_sockfd, password, strlen(password) + 1, 0) == -1) {
+
+	}
              
     return 0;
 } 
