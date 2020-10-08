@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
 	char* pubKey = pubkey; 
 
 
-	//Check if user is authenticated 
+	// Check if user is authenticated 
 	int isUser = 0; 
 	if (recv(sockfd, &isUser, sizeof(isUser), 0) == -1) {
 		perror("Error receiving user authentication"); 	
@@ -130,17 +130,38 @@ int main(int argc, char** argv) {
         perror("Error sending password to server");
 	}
 
-	//TODO should the stuff above be a part of the main thread????
+    // Verify password
+    int incorrect = 1;
+    if (recv(sockfd, &incorrect, sizeof(incorrect), 0) == -1) {
+		perror("Error receiving password status"); 	
+	}
+    while (incorrect) {
+        cout << "Incorrect password.  Please enter again:" << endl;
+        sscanf("%s", password);
+        // Send new password back to server
+        char* encrypted_password = encrypt(password, pubkey); 
+	    if(send(sockfd, encrypted_password, strlen(encrypted_password) + 1, 0) == -1) {
+            perror("Error sending password to server");
+	    }
+        // Receive verification response
+        if (recv(sockfd, &incorrect, sizeof(incorrect), 0) == -1) {
+		    perror("Error receiving password status"); 	
+	    }
+    }
 
+	//TODO should the stuff above be a part of the main thread????
+    cout << "Connection established." << endl;  //FIXME: is this the right spot for this line?
 
     pthread_t thread;
     int rc = pthread_create(&thread, NULL, handle_messages, NULL);
     while(1){
-        if(rc){
+        if(rc) {
             cout << "Error: unable to create thread" << endl;
             exit(-1);
         }
-        std::cin >> op;
+        cout << ">Please enter a command (BM: Broadcast Messaging, PM: Private Messaging, EX: Exit)" << endl;
+        cout << "> "; 
+        cin >> op;
         if(op=="PM"){
             private_message();
         }

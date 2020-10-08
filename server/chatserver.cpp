@@ -27,10 +27,10 @@
 using namespace std;
 
 /* Authenticate user */ 
-int authenticate(char* username) {
+char* authenticate(char* username) {
 
 	// Prepare to authenticate 
-	FILE *user_file = fopen("users.txt", "w+"); 
+	FILE *user_file = fopen("users.txt", "r"); 
 	if (!user_file) {
 		perror("Could not open users file\n"); 
 		exit(-1); 
@@ -40,25 +40,58 @@ int authenticate(char* username) {
 	char line[MAX_SIZE];
 	char* file_user; 
 	char* password; 
-	while(fgets(line, MAX_SIZE, user_file)){
+	while(fgets(line, MAX_SIZE, user_file)) {
 		file_user = strtok(line, ","); 
 		if(strcmp(username, file_user) == 0) {
-			return 1; //username exists 
+            password = strtok(NULL, ",");
+            fclose(user_file);
+			return password; // username exists 
 		}
 	}
-
-	return 0; //username does not exist	
+    
+    fclose(user_file);
+	return NULL; // username does not exist	
 }
 
-/* Login user 
-void login(char* username, char* password) {
-	
+/* Login user */
+void login(char* username, char* password, char* filePassword, int new_sockfd) {
+    int incorrect;
+    cout << "FP: " << filePassword << endl;
+    if (strcmp(password, filePassword) != 0) 
+        cout << "no match." << endl;
+    while (strcmp(password, filePassword) != 0) { // Passwords do not match.
+
+        cout << "password: " << password << "fp: " << filePassword << endl;
+
+        incorrect = htonl(1);
+        if (send(new_sockfd, &incorrect, sizeof(incorrect), 0) == -1) {
+            perror("Error sending password code to client");	
+	    }
+        // Receive new password attempt from client
+        char encrypted_password[MAX_SIZE]; 
+	    if (recv(new_sockfd, &encrypted_password, sizeof(encrypted_password), 0) == -1) {
+		    perror("Error receiving encrypted password from client\n"); 
+	    }
+	    password = decrypt(encrypted_password); 
+    }
+
+    incorrect = htonl(0);  // Passwords match; send code
+    if (send(new_sockfd, &incorrect, sizeof(incorrect), 0) == -1) {
+        perror("Error sending password code to client");	
+	}    
 }
 
-Register user  
-void register(char* username, char* password) {
-	
-}*/ 
+/* Add new user */
+void addUser(char* username, char* password) {
+    FILE* user_file = fopen("users.txt", "a");
+    int size = strlen(username) + strlen(password) + 2;
+    char userLine[size];
+    // Append username,password to users.txt
+    snprintf(userLine, size, "%s,%s", username, password);
+    fwrite(userLine, size, 1, user_file);
+    fwrite("\n", sizeof(char), 1, user_file);
+    fclose(user_file);
+}
 
 /* Handle connection for each client */ 
 void *connection_handler(void *socket_desc)
@@ -68,18 +101,25 @@ void *connection_handler(void *socket_desc)
 	char* pubKey = getPubKey(); 
 
 	// Send username to server
-    if(recv(new_sockfd,&user,sizeof(user),0) ==-1){
+    if (recv(new_sockfd, &user, sizeof(user), 0) ==-1){
         perror("Received username error\n");
     }
     cout << "Received username : " << user << endl;
 
 	// Send public key to client
-	if(send(new_sockfd, pubKey, strlen(pubKey) + 1, 0) == -1) {
+	if (send(new_sockfd, pubKey, strlen(pubKey) + 1, 0) == -1) {
         perror("Error sending public key to client");	
 	}
 
 	// Check if user is authenticated
-	int user_exists = htonl(authenticate(user));
+    char* filePassword = authenticate(user);
+    int user_exists;
+    if (filePassword) 
+	    user_exists = htonl(1);
+    else 
+        user_exists = htonl(0);
+
+    cout << "LOOK fp: " << filePassword << endl;
     if (send(new_sockfd, &user_exists, sizeof(user_exists), 0) == -1) {
         perror("Error sending user authentication to client");
     } 
@@ -91,6 +131,14 @@ void *connection_handler(void *socket_desc)
 	}
 	char* password = decrypt(encrypted_password); 
 	cout << "Received password: " << password << endl; 
+
+    // Login or register user 
+    if (user_exists) {
+        login(user, password, filePassword, new_sockfd);
+    } 
+    else {
+        addUser(user, password);
+    }
              
     return 0;
 } 
@@ -176,7 +224,7 @@ int main(int argc, char** argv) {
             perror("could not create thread");
             return 1;
         }
- 
+
     }
 	return 0;
 }
