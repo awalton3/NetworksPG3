@@ -41,23 +41,26 @@ int authenticate(char* username) {
 	char* file_user; 
 	char* password; 
 	while(fgets(line, MAX_SIZE, user_file)){
-
 		file_user = strtok(line, ","); 
-
-		// Username exists
 		if(strcmp(username, file_user) == 0) {
-			return 1; 
+			return 1; //username exists 
 		}
 	}
 
-	// Username does not exist
-	return 0; 	
+	return 0; //username does not exist	
 }
 
+/* Login user 
+void login(char* username, char* password) {
+	
+}
 
-/*
- * This will handle connection for each client
- * */
+Register user  
+void register(char* username, char* password) {
+	
+}*/ 
+
+/* Handle connection for each client */ 
 void *connection_handler(void *socket_desc)
 {
     int new_sockfd = *(int*) socket_desc;
@@ -69,17 +72,25 @@ void *connection_handler(void *socket_desc)
         perror("Received username error\n");
     }
     cout << "Received username : " << user << endl;
-	
+
+	// Send public key to client
+	if(send(new_sockfd, pubKey, strlen(pubKey) + 1, 0) == -1) {
+        perror("Error sending public key to client");	
+	}
+
 	// Check if user is authenticated
-	int user_exists = authenticate(user);
+	int user_exists = htonl(authenticate(user));
     if (send(new_sockfd, &user_exists, sizeof(user_exists), 0) == -1) {
         perror("Error sending user authentication to client");
     } 
 
-	//Send public key to client
-	if(send(new_sockfd, pubKey, strlen(pubKey) + 1, 0) == -1) {
-        perror("Error sending public key to client");	
+	// Receive password from client 
+	char encrypted_password[MAX_SIZE]; 
+	if (recv(new_sockfd, &encrypted_password, sizeof(encrypted_password), 0) == -1) {
+		perror("Error receiving encrypted password from client\n"); 
 	}
+	char* password = decrypt(encrypted_password); 
+	cout << "Received password: " << password << endl; 
              
     return 0;
 } 

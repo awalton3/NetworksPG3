@@ -16,7 +16,9 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include "pg3lib.h"
 #define MAX_SIZE 4096
+
 using namespace std;
 
 void error(int code) {
@@ -85,26 +87,54 @@ int main(int argc, char** argv) {
         perror("Error connecting.");
         return 1;
     }
-    
     cout << "Connection established" << endl;
 
-    if(send(sockfd, user, strlen(user) + 1 , 0) == -1 ){
+	// Send username to server 
+    if(send(sockfd, user, strlen(user) + 1 , 0) == -1){
         perror("Error in sending the username\n");
     }
-	
-    // Get user password
-	char* password; 
-	cout << "Enter password:"; 
-	scanf(password, "%s");
 
-	// Send password
-	if(send(sockfd, password, strlen(password) + 1, 0) == -1) {
+	// Get pubkey from server 
+	char pubkey[MAX_SIZE]; 
+	if (recv(sockfd, &pubkey, sizeof(pubkey), 0) == -1) {
+		perror("Error receiving pubkey from server\n"); 
+	}
+	cout << "Received pubKey: " << pubkey << endl; 
+
+	char* pubKey = pubkey; 
+
+
+	//Check if user is authenticated 
+	int isUser = 0; 
+	if (recv(sockfd, &isUser, sizeof(isUser), 0) == -1) {
+		perror("Error receiving user authentication"); 	
+	}
+	isUser = ntohl(isUser); 
+	cout << "Received auth status : " << isUser << endl;
+
+	switch (isUser) {
+		case 0: cout << "Creating new user\n"; break; 
+		case 1: cout << "Existing user\n"; break; 	
+		default: exit(-1); 
+	}
+
+    // Get user password
+	char password[MAX_SIZE]; 
+	cout << "Enter password:"; 
+	scanf("%s", password);  
+	cout << password << endl; 
+
+	// Send password to server 
+	char* encrypted_password = encrypt(password, pubkey); 
+	if(send(sockfd, encrypted_password, strlen(encrypted_password) + 1, 0) == -1) {
         perror("Error sending password to server");
 	}
 
+	//TODO should the stuff above be a part of the main thread????
+
+
     pthread_t thread;
     int rc = pthread_create(&thread, NULL, handle_messages, NULL);
-
     while(1){
         if(rc){
             cout << "Error: unable to create thread" << endl;
@@ -121,9 +151,6 @@ int main(int argc, char** argv) {
             cout << "Invalid entry" << endl;
         }
     }
-    
-    
-
-
+ 
 	return 0; 
 }
