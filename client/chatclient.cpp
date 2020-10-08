@@ -29,7 +29,15 @@ void error(int code) {
         break;
     }
 }
-
+void *handle_messages(void*){
+    return 0;
+}
+void private_message(){
+    cout << "Private message entered" << endl;
+}
+void broadcast(){
+    cout << "Broadcast message entered" << endl;
+}
 
 int main(int argc, char** argv) {
     /* Parse command line arguments */
@@ -42,6 +50,7 @@ int main(int argc, char** argv) {
     int port = stoi(argv[2]);
     char* user = argv[3];
     struct stat statbuf;
+    string op;
        
     /* Translate host name into peer's IP address */
     struct hostent* hostIP = gethostbyname(host);
@@ -76,8 +85,34 @@ int main(int argc, char** argv) {
         perror("Error connecting.");
         return 1;
     }
+    
+    cout << "Connection established" << endl;
 
-	cout << "Connection established" << endl; 
+    if(send(sockfd,user,strlen(user) + 1 ,0) == -1 ){
+        perror("Error in sending the username\n");
+
+    }
+    
+
+    pthread_t thread;
+    int rc = pthread_create(&thread,NULL,handle_messages,NULL);
+
+    while(1){
+        if(rc){
+            cout << "Error: unable to create thread" << endl;
+            exit(-1);
+        }
+        std::cin >> op;
+        if(op=="PM"){
+            private_message();
+        }
+        else if(op=="BM"){
+            broadcast();
+        }
+        else{
+            cout << "Invalid entry" << endl;
+        }
+    }
     
     
 
