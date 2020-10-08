@@ -29,7 +29,12 @@ using namespace std;
  * */
 void *connection_handler(void *socket_desc)
 {
-    int sock = *(int*) socket_desc;
+    int new_sockfd = *(int*) socket_desc;
+    char user[MAX_SIZE];
+    if(recv(new_sockfd,&user,sizeof(user),0) ==-1){
+        perror("Received username error\n");
+    }
+    cout << "Received username : " << user << endl;
              
     return 0;
 } 
@@ -111,7 +116,7 @@ int main(int argc, char** argv) {
 
         cout << "Connection established." << endl;
 
-        if(pthread_create(&thread_id, NULL, connection_handler, (void*) &client_sock) < 0) {
+        if(pthread_create(&thread_id, NULL, connection_handler, (void*) &new_sockfd) < 0) {
             perror("could not create thread");
             return 1;
         }
