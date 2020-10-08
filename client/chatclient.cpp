@@ -88,14 +88,22 @@ int main(int argc, char** argv) {
     
     cout << "Connection established" << endl;
 
-    if(send(sockfd,user,strlen(user) + 1 ,0) == -1 ){
+    if(send(sockfd, user, strlen(user) + 1 , 0) == -1 ){
         perror("Error in sending the username\n");
-
     }
-    
+	
+    // Get user password
+	char* password; 
+	cout << "Enter password:"; 
+	scanf(password, "%s");
+
+	// Send password
+	if(send(sockfd, password, strlen(password) + 1, 0) == -1) {
+        perror("Error sending password to server");
+	}
 
     pthread_t thread;
-    int rc = pthread_create(&thread,NULL,handle_messages,NULL);
+    int rc = pthread_create(&thread, NULL, handle_messages, NULL);
 
     while(1){
         if(rc){

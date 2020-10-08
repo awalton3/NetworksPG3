@@ -6,7 +6,7 @@ all: chatserver
 chatserver: chatserver.o
 	g++ $(LDFLAGS) -o chatserver chatserver.o
 
-chatserver.o: chatserver.cpp
+chatserver.o: pg3lib.h chatserver.cpp
 	g++ $(CFLAGS) chatserver.cpp
 
 clean: 

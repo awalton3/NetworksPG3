@@ -19,6 +19,7 @@
 #include <time.h>
 #include <stdint.h>
 #include <pthread.h>
+#include "pg3lib.h"
 
 #define MAX_SIZE 4096
 #define MAX_PENDING 5
@@ -49,7 +50,7 @@ int authenticate(char* username) {
 		}
 	}
 
-	// Username does not exists
+	// Username does not exist
 	return 0; 	
 }
 
@@ -61,7 +62,7 @@ void *connection_handler(void *socket_desc)
 {
     int new_sockfd = *(int*) socket_desc;
     char user[MAX_SIZE];
-	char pubKey = getPubKey(); 
+	char* pubKey = getPubKey(); 
 
 	// Send username to server
     if(recv(new_sockfd,&user,sizeof(user),0) ==-1){
@@ -70,26 +71,14 @@ void *connection_handler(void *socket_desc)
     cout << "Received username : " << user << endl;
 	
 	// Check if user is authenticated
-	int user_exists = authenticate(user); 
-	if (!user_exists) {
-		cout << "Creating new user\n"; 
-	} else {
-		cout << "Existing user\n"; 
-	}
+	int user_exists = authenticate(user);
+    if (send(new_sockfd, &user_exists, sizeof(user_exists), 0) == -1) {
+        perror("Error sending user authentication to client");
+    } 
 
 	//Send public key to client
-	if(send(new_sockfd, password, strlen(password) + 1, 0) == -1) {
-		
-	}
-
-	// Get user password
-	string password; 
-	cout << "Enter password:"; 
-	cin >> password;
-
-	// Send password
-	if(send(new_sockfd, password, strlen(password) + 1, 0) == -1) {
-
+	if(send(new_sockfd, pubKey, strlen(pubKey) + 1, 0) == -1) {
+        perror("Error sending public key to client");	
 	}
              
     return 0;
