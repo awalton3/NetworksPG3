@@ -54,31 +54,29 @@ char* authenticate(char* username) {
 }
 
 /* Login user */
-void login(char* username, char* password, char* filePassword, int new_sockfd) {
+void login(char* username, char* filePassword, char* password, int new_sockfd) {
     int incorrect;
-    cout << "FP: " << filePassword << endl;
-    if (strcmp(password, filePassword) != 0) 
-        cout << "no match." << endl;
     while (strcmp(password, filePassword) != 0) { // Passwords do not match.
-
-        cout << "password: " << password << "fp: " << filePassword << endl;
-
         incorrect = htonl(1);
         if (send(new_sockfd, &incorrect, sizeof(incorrect), 0) == -1) {
             perror("Error sending password code to client");	
 	    }
+
         // Receive new password attempt from client
-        char encrypted_password[MAX_SIZE]; 
-	    if (recv(new_sockfd, &encrypted_password, sizeof(encrypted_password), 0) == -1) {
+        char* encrypted_password = (char*) calloc(MAX_SIZE, sizeof(char));  // Allocate large buffer
+	    if (recv(new_sockfd, encrypted_password, MAX_SIZE, 0) == -1) {
 		    perror("Error receiving encrypted password from client\n"); 
 	    }
-	    password = decrypt(encrypted_password); 
+   
+        password = decrypt(encrypted_password);
+        free(encrypted_password);
     }
 
     incorrect = htonl(0);  // Passwords match; send code
     if (send(new_sockfd, &incorrect, sizeof(incorrect), 0) == -1) {
         perror("Error sending password code to client");	
 	}    
+
 }
 
 /* Add new user */
@@ -114,12 +112,13 @@ void *connection_handler(void *socket_desc)
 	// Check if user is authenticated
     char* filePassword = authenticate(user);
     int user_exists;
-    if (filePassword) 
+    if (filePassword) { 
 	    user_exists = htonl(1);
-    else 
+    }
+    else {
         user_exists = htonl(0);
+    }
 
-    cout << "LOOK fp: " << filePassword << endl;
     if (send(new_sockfd, &user_exists, sizeof(user_exists), 0) == -1) {
         perror("Error sending user authentication to client");
     } 
@@ -130,11 +129,10 @@ void *connection_handler(void *socket_desc)
 		perror("Error receiving encrypted password from client\n"); 
 	}
 	char* password = decrypt(encrypted_password); 
-	cout << "Received password: " << password << endl; 
 
     // Login or register user 
     if (user_exists) {
-        login(user, password, filePassword, new_sockfd);
+        login(user, filePassword, password, new_sockfd);
     } 
     else {
         addUser(user, password);

@@ -121,8 +121,7 @@ int main(int argc, char** argv) {
     // Get user password
 	char password[MAX_SIZE]; 
 	cout << "Enter password:"; 
-	scanf("%s", password);  
-	cout << password << endl; 
+	scanf("%s", password);   
 
 	// Send password to server 
 	char* encrypted_password = encrypt(password, pubkey); 
@@ -130,23 +129,24 @@ int main(int argc, char** argv) {
         perror("Error sending password to server");
 	}
 
-    // Verify password
-    int incorrect = 1;
-    if (recv(sockfd, &incorrect, sizeof(incorrect), 0) == -1) {
-		perror("Error receiving password status"); 	
-	}
-    while (incorrect) {
-        cout << "Incorrect password.  Please enter again:" << endl;
-        sscanf("%s", password);
-        // Send new password back to server
-        char* encrypted_password = encrypt(password, pubkey); 
-	    if(send(sockfd, encrypted_password, strlen(encrypted_password) + 1, 0) == -1) {
-            perror("Error sending password to server");
-	    }
-        // Receive verification response
-        if (recv(sockfd, &incorrect, sizeof(incorrect), 0) == -1) {
-		    perror("Error receiving password status"); 	
-	    }
+    if (isUser) { 
+        // Verify password
+        int incorrect = 1;
+        while (incorrect) {
+            if (recv(sockfd, &incorrect, sizeof(incorrect), 0) == -1) {
+		        perror("Error receiving password status"); 	
+	        }      
+            if (!incorrect) // Password is correct!
+                break;  
+
+            cout << "Incorrect password.  Please enter again:";
+            scanf("%s", password);
+            // Send new password back to server
+            char* encrypted_password = encrypt(password, pubkey); 
+	        if (send(sockfd, encrypted_password, strlen(encrypted_password) + 1, 0) == -1) {
+                perror("Error sending password to server");
+	        }
+        }
     }
 
 	//TODO should the stuff above be a part of the main thread????
