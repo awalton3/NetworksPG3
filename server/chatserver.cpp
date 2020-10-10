@@ -19,12 +19,16 @@
 #include <time.h>
 #include <stdint.h>
 #include <pthread.h>
+#include <map>
 #include "pg3lib.h"
 
 #define MAX_SIZE 4096
 #define MAX_PENDING 5
 
 using namespace std;
+
+/* Global variables */
+map<int, char*> active_sockets;  // Keeps track of {active socket, username}
 
 /* Authenticate user */ 
 char* authenticate(char* username) {
@@ -94,7 +98,10 @@ void addUser(char* username, char* password) {
 /* Handle connection for each client */ 
 void *connection_handler(void *socket_desc)
 {
+    // Add socket to map of active client sockets   
     int new_sockfd = *(int*) socket_desc;
+    active_sockets[new_sockfd] = NULL;
+
     char user[MAX_SIZE];
 	char* pubKey = getPubKey(); 
 
@@ -136,6 +143,34 @@ void *connection_handler(void *socket_desc)
     } 
     else {
         addUser(user, password);
+    }
+
+    // Add user to active socket map
+    active_sockets[new_sockfd] = user;
+
+    // Listen for commands from client
+    while (1) {
+        char command[MAX_SIZE];
+        if (recv(new_sockfd, &command, sizeof(command), 0) == -1) {
+            perror("Error receving command from client");
+        }
+        if (strcmp(command, "BM") == 0) {
+
+        }
+        else if (strcmp(command, "PM") == 0) {
+        
+        }
+        else if (strcmp(command, "EX") == 0) {
+            // Close socket descriptor
+            close(new_sockfd); 
+            // Remove user from active user map
+            active_sockets.erase(new_sockfd);
+            break;
+        }
+        else {
+            perror("Invalid command.");
+        }
+         
     }
              
     return 0;

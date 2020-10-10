@@ -21,6 +21,7 @@
 
 using namespace std;
 
+/* Helper Functions */ 
 void error(int code) {
     switch (code) {
         case 1:
@@ -31,14 +32,37 @@ void error(int code) {
         break;
     }
 }
+
+void send_str(int sockfd, string command) { 
+	char commandF[BUFSIZ]; 
+	strcpy(commandF, command.c_str());  
+
+	if (send(sockfd, commandF, strlen(commandF) + 1, 0) == -1) {
+        perror("Error sending command to server."); 
+        return;
+    }
+}
+
+/* Threading */
 void *handle_messages(void*){
     return 0;
 }
+
+/* Client functionality */
 void private_message(){
     cout << "Private message entered" << endl;
 }
 void broadcast(){
     cout << "Broadcast message entered" << endl;
+}
+
+void exit_client(int sockfd) {
+    // Send EXIT operation to server
+    send_str(sockfd, "EX");
+
+    // Close socket and leave
+    close(sockfd);
+    exit(1); 
 }
 
 int main(int argc, char** argv) {
@@ -162,11 +186,14 @@ int main(int argc, char** argv) {
         cout << ">Please enter a command (BM: Broadcast Messaging, PM: Private Messaging, EX: Exit)" << endl;
         cout << "> "; 
         cin >> op;
-        if(op=="PM"){
+        if (op == "PM") {
             private_message();
         }
-        else if(op=="BM"){
+        else if (op == "BM") {
             broadcast();
+        }
+        else if (op == "EX") {
+            exit_client(sockfd);
         }
         else{
             cout << "Invalid entry" << endl;
