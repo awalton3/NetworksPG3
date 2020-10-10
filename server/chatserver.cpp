@@ -30,11 +30,37 @@ using namespace std;
 /* Global variables */
 map<int, char*> active_sockets;  // Keeps track of {active socket, username}
 
+/*Broadcast*/
+void broadcast(int sockfd){
+    int ack = htonl(1);
+    int i = 1;
+    char msg[MAX_SIZE];
+    //Send acknowledgment
+    if(send(sockfd,&ack,sizeof(ack),0) ==-1 ){
+        perror("Acknowledgement send error\n");
+    }
+    //Receive message
+    if (recv(sockfd,&msg, sizeof(msg), 0) == -1) {
+        perror("Receive message error\n");
+    } 
+    printf("Message received: %s \n",msg);
+
+
+    
+    //Send message to all clients
+   /*if(send(sockfd,msg,strlen(msg) + 1, 0)==-1){
+       perror("Error sending message from server \n");
+    }*/
+
+
+
+}
+
 /* Authenticate user */ 
 char* authenticate(char* username) {
 
 	// Prepare to authenticate 
-	FILE *user_file = fopen("users.txt", "r"); 
+	FILE *user_file = fopen("users.txt", "w+"); 
 	if (!user_file) {
 		perror("Could not open users file\n"); 
 		exit(-1); 
@@ -153,8 +179,11 @@ void *connection_handler(void *socket_desc)
         char command[MAX_SIZE];
         if (recv(new_sockfd, &command, sizeof(command), 0) == -1) {
             perror("Error receving command from client");
+
         }
         if (strcmp(command, "BM") == 0) {
+            broadcast(new_sockfd);
+
 
         }
         else if (strcmp(command, "PM") == 0) {
