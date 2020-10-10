@@ -52,7 +52,41 @@ void *handle_messages(void*){
 void private_message(){
     cout << "Private message entered" << endl;
 }
-void broadcast(){
+void broadcast(int sockfd){
+    send_str(sockfd,"BM");
+    int ack;
+    //Receive acknowledgement
+    if(recv(sockfd,&ack,sizeof(ack),0)==-1){
+        perror("Receive acknowledgement error\n");
+    }
+    ack = ntohl(ack);
+
+    if(ack == 1){
+        //Send message to the user
+    
+	char msg[BUFSIZ];
+
+
+
+        cout << ">Enter the public message: " << endl;
+    	scanf("%s", msg);
+
+        if(send(sockfd,msg,strlen(msg) + 1,0)==-1){
+            perror("Error sending message\n");
+
+        }
+        //Receive message
+        /*if(recv(sockfd,&msg,sizeof(msg),0)==-1){
+            perror("Receive message error \n");
+        }
+        printf("Message received:%s \n",msg);*/
+
+
+
+
+    }
+
+    //cout << "Received ack num: " << ack << endl;
     cout << "Broadcast message entered" << endl;
 }
 
@@ -190,7 +224,7 @@ int main(int argc, char** argv) {
             private_message();
         }
         else if (op == "BM") {
-            broadcast();
+            broadcast(sockfd);
         }
         else if (op == "EX") {
             exit_client(sockfd);
