@@ -16,10 +16,17 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <map>
 #include "pg3lib.h"
 #define MAX_SIZE 4096
 
 using namespace std;
+
+/* Globals */ 
+typedef struct {
+	map<int, char*> active_sockets_map;
+} active_sockets_struct; 
+
 
 /* Helper Functions */ 
 void error(int code) {
@@ -36,12 +43,19 @@ void error(int code) {
 void send_str(int sockfd, string command) { 
 	char commandF[BUFSIZ]; 
 	strcpy(commandF, command.c_str());  
-
 	if (send(sockfd, commandF, strlen(commandF) + 1, 0) == -1) {
+        perror("Error sending command to server."); 
+    }
+}
+
+void send_int(int sockfd, int command) {
+	command  = htonl(command); 
+	if (send(sockfd, &command, sizeof(command), 0) == -1) {
         perror("Error sending command to server."); 
         return;
     }
 }
+
 
 /* Threading */
 void *handle_messages(void*){
@@ -49,9 +63,6 @@ void *handle_messages(void*){
 }
 
 /* Client functionality */
-void private_message(){
-    cout << "Private message entered" << endl;
-}
 void broadcast(int sockfd){
     send_str(sockfd,"BM");
     int ack;
@@ -88,6 +99,90 @@ void broadcast(int sockfd){
 
     //cout << "Received ack num: " << ack << endl;
     cout << "Broadcast message entered" << endl;
+}
+
+int print_active_users(int sockfd) {
+
+	// Receive number of users
+	int n_users; 
+	if(recv(sockfd, &n_users, sizeof(n_users), 0) == -1) {
+		perror("Error receiving number of users"); 
+		return -1; 
+	}
+	n_users = ntohl(n_users); 
+
+	cout << "Number of users: " << n_users << endl; 
+
+	// Send ack to server 
+	int ack = (n_users >=0 ? 1 : -1); 
+	ack = htonl(ack);
+	if(send(sockfd, &ack, sizeof(ack), 0) == -1) {
+		perror("Error sending ack to server\n"); 
+		return -1; 
+	}
+
+	cout << "Sent ack" << endl; 
+
+	cout << "Peers online:\n"; 
+
+	// Receive active users from server 
+	for (int i = 0; i < n_users; ) {
+		char username[MAX_SIZE]; 
+		if (recv(sockfd, &username, sizeof(username), 0) == -1) {
+			perror("Error receiving username\n");
+			return -1; 
+		}
+		cout << username << endl; 
+	}
+
+	return n_users; 
+}
+
+void private_message(int sockfd) {
+
+	//TODO divide up and put in correct threads
+
+	// Send operation to server 
+	send_str(sockfd, "PM"); // TODO error check
+	
+	// Get active users from server 
+	int n_users = print_active_users(sockfd); 
+	
+	/*active_sockets_struct *active_users = new active_sockets_struct(); 
+	map<int, char*> buffer; 
+	active_users->active_sockets_map = buffer; 
+
+	if(recv(sockfd, (active_sockets_struct*) &active_users, sizeof(active_users), 0) == -1) {
+		perror("Error receiving active users from server\n"); 
+		return; 
+	}
+
+	cout << "Received active user list: " << active_users << endl; 
+
+	for (auto const& user : active_users->active_sockets_map) {
+		cout << user.first << ": " << user.second; 
+	} */ 
+
+	// Prompt user to enter target user
+	if (n_users > 0) {
+
+		char target[MAX_SIZE];
+   		cout << ">Peer to message: ";	
+		cin >> target; 
+
+		// Sends username to server
+		if(send(sockfd, &target, sizeof(target), 0) == -1){
+			perror("Error sending recipient to server"); 
+			return; 
+		}
+
+		cout << "Sent target user to server\n"; 
+	}
+
+
+	// Get pubkey from server 
+	
+	// Get message from the user
 }
 
 void exit_client(int sockfd) {
@@ -221,7 +316,7 @@ int main(int argc, char** argv) {
         cout << "> "; 
         cin >> op;
         if (op == "PM") {
-            private_message();
+            private_message(sockfd);
         }
         else if (op == "BM") {
             broadcast(sockfd);

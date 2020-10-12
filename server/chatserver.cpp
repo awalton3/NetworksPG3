@@ -28,7 +28,11 @@
 using namespace std;
 
 /* Global variables */
-map<int, char*> active_sockets;  // Keeps track of {active socket, username}
+map<int, char*> ACTIVE_SOCKETS;  // Keeps track of {active socket, username}
+
+typedef struct {
+	map<int, char*> active_sockets_map;
+} active_sockets_struct; 
 
 /*Broadcast*/
 void broadcast(int sockfd){
@@ -53,6 +57,77 @@ void broadcast(int sockfd){
     }*/
 
 
+
+}
+
+void send_active_users(int sockfd) {
+
+	// Send client size of active sockets list 
+	int n_users = ACTIVE_SOCKETS.size() - 1; //remove curr user
+	n_users = htonl(n_users); 
+	if(send(sockfd, &n_users, sizeof(n_users),0) == -1) {
+		perror("Error sending list size\n"); 
+	}
+
+	// Receive ack from client 
+	int ack; 
+	if (recv(sockfd, &ack, sizeof(ack), 0) == -1) {
+		perror("Error receiving acknowledgement"); 
+	}
+	ack = ntohl(ack); 
+	if (ack == -1) {
+		cout << "An unknown error occurred\n"; 
+	}
+
+	// Send active usernames
+	for (auto const& user : ACTIVE_SOCKETS) {
+		if (user.first == sockfd) { //skip current user
+			continue; 
+		}
+		if(send(sockfd, user.second, sizeof(user.second), 0) == -1) {
+			perror("Error sending username\n");
+		   	continue; 	
+		}
+	}	
+}
+
+int is_active(char* username) {
+	for (auto const& user : ACTIVE_SOCKETS) {
+		if (strcmp(user.second, username) == 0) {
+			return 1;  
+		}
+	}	
+	return 0;
+}
+
+/* Private message */ 
+void private_message(int sockfd) {
+
+	// Send active users to client 
+	send_active_users(sockfd); 
+	
+	// Get target user
+	char target[MAX_SIZE]; 
+	if(recv(sockfd, &target, sizeof(target), 0) == -1) {
+		perror("Error receiving target username\n"); 
+	}
+
+	cout << "Target user: " << target << endl; 
+	
+	// Send public key to client
+	
+	// Receive message to send 
+	
+	// Check if username exists
+	if (is_active(target)) {
+		//user exists 
+	} else {
+		//user does not exists	
+	}
+	
+	// Send message to target user 
+	
+	// Send confirmation
 
 }
 
@@ -126,7 +201,7 @@ void *connection_handler(void *socket_desc)
 {
     // Add socket to map of active client sockets   
     int new_sockfd = *(int*) socket_desc;
-    active_sockets[new_sockfd] = NULL;
+    ACTIVE_SOCKETS[new_sockfd] = NULL;
 
     char user[MAX_SIZE];
 	char* pubKey = getPubKey(); 
@@ -172,28 +247,25 @@ void *connection_handler(void *socket_desc)
     }
 
     // Add user to active socket map
-    active_sockets[new_sockfd] = user;
+    ACTIVE_SOCKETS[new_sockfd] = user;
 
     // Listen for commands from client
     while (1) {
         char command[MAX_SIZE];
         if (recv(new_sockfd, &command, sizeof(command), 0) == -1) {
             perror("Error receving command from client");
-
         }
         if (strcmp(command, "BM") == 0) {
             broadcast(new_sockfd);
-
-
         }
         else if (strcmp(command, "PM") == 0) {
-        
-        }
+			private_message(new_sockfd); 
+		}
         else if (strcmp(command, "EX") == 0) {
             // Close socket descriptor
             close(new_sockfd); 
             // Remove user from active user map
-            active_sockets.erase(new_sockfd);
+            ACTIVE_SOCKETS.erase(new_sockfd);
             break;
         }
         else {
