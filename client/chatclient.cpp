@@ -23,6 +23,7 @@
 using namespace std;
 
 /* Globals */ 
+int sockfd;
 typedef struct {
 	map<int, char*> active_sockets_map;
 } active_sockets_struct; 
@@ -59,6 +60,18 @@ void send_int(int sockfd, int command) {
 
 /* Threading */
 void *handle_messages(void*){
+    //Receive BM message
+    
+    char msg[MAX_SIZE];
+
+    if(recv(sockfd,&msg,sizeof(msg),0)==-1){
+        perror("Receive message error \n");
+    }
+    printf("Message received:%s \n",msg);
+
+
+
+
     return 0;
 }
 
@@ -86,13 +99,7 @@ void broadcast(int sockfd){
             perror("Error sending message\n");
 
         }
-        //Receive message
-        /*if(recv(sockfd,&msg,sizeof(msg),0)==-1){
-            perror("Receive message error \n");
-        }
-        printf("Message received:%s \n",msg);*/
-
-
+       
 
 
     }
@@ -226,7 +233,7 @@ int main(int argc, char** argv) {
     sock.sin_port = htons(port);
 
     /* Create the socket */
-    int sockfd;
+    //int sockfd;
     //socklen_t len = sizeof(sock);
     if ((sockfd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
         perror("Error creating socket.");
@@ -320,6 +327,7 @@ int main(int argc, char** argv) {
         }
         else if (op == "BM") {
             broadcast(sockfd);
+
         }
         else if (op == "EX") {
             exit_client(sockfd);
