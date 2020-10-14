@@ -34,24 +34,29 @@ typedef struct {
 	map<int, char*> active_sockets_map;
 } active_sockets_struct; 
 
-/*Broadcast*/
-void broadcast(int sockfd){
+/* Broadcast message to all clients */
+void broadcast(int sockfd) {
+    cout << "Entered broadcast function " << endl;
+    
     int ack = htonl(1);
     char msg[MAX_SIZE];
-    //Send acknowledgment
-    if(send(sockfd,&ack,sizeof(ack),0) ==-1 ){
+    // Send acknowledgment
+    if (send(sockfd, &ack, sizeof(ack), 0) == -1) {
         perror("Acknowledgement send error\n");
-    }
-    //Receive message
-    if (recv(sockfd,&msg, sizeof(msg), 0) == -1) {
+    } 
+     
+    cout << "Sent ack" << endl;
+         
+    // Receive message
+    if (recv(sockfd, &msg, sizeof(msg), 0) == -1) {
         perror("Receive message error\n");
     } 
-    printf("Message received: %s \n",msg);
+    cout << "Message received: hello?" << msg;
 
 
     
-    //Send message to all clients
-    for (auto const& user : ACTIVE_SOCKETS) {
+    // Send message to all clients   // TODO: comment this part back in
+    /*for (auto const &user : ACTIVE_SOCKETS) {
         if (user.first == sockfd) { //skip current user
             continue; 
         }
@@ -59,7 +64,7 @@ void broadcast(int sockfd){
             perror("Error sending message\n");
             continue; 	
         }
-    }	
+    }	*/
   
 
 
@@ -139,8 +144,10 @@ void private_message(int sockfd) {
 /* Authenticate user */ 
 char* authenticate(char* username) {
 
+    //TODO: check if users.txt exists, and if not, create it
+
 	// Prepare to authenticate 
-	FILE *user_file = fopen("users.txt", "w+"); 
+	FILE *user_file = fopen("users.txt", "r");  // FIXME: This will give an error if the file does not already exist
 	if (!user_file) {
 		perror("Could not open users file\n"); 
 		exit(-1); 
@@ -150,9 +157,9 @@ char* authenticate(char* username) {
 	char line[MAX_SIZE];
 	char* file_user; 
 	char* password; 
-	while(fgets(line, MAX_SIZE, user_file)) {
+	while (fgets(line, MAX_SIZE, user_file)) {
 		file_user = strtok(line, ","); 
-		if(strcmp(username, file_user) == 0) {
+		if (strcmp(username, file_user) == 0) {
             password = strtok(NULL, ",");
             fclose(user_file);
 			return password; // username exists 

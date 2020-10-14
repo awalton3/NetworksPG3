@@ -59,53 +59,52 @@ void send_int(int sockfd, int command) {
 
 
 /* Threading */
-void *handle_messages(void*){
-    //Receive BM message
-    
-    char msg[MAX_SIZE];
-
-    if(recv(sockfd,&msg,sizeof(msg),0)==-1){
-        perror("Receive message error \n");
-    }
-    printf("Message received:%s \n",msg);
-
-
-
+void *handle_messages(void*) {
+    while (1) {  //FIXME: change so that there is only one recv in here, and it parses out D vs. C for data and command messages
+        // Receive acknowledgement first 
+        int ack;
+        if (recv(sockfd, &ack, sizeof(ack), 0) == -1) {
+            perror("Receive acknowledgement error\n");
+        }
+        cout << "HELLO??" << endl;
+        ack = ntohl(ack);
+        // Receive BM message
+        char msg[MAX_SIZE];
+        if (recv(sockfd, &msg, sizeof(msg), 0) == -1) {
+            perror("Receive message error \n");
+        }
+        cout << "Message received: " << msg;
+    } 
 
     return 0;
 }
 
 /* Client functionality */
 void broadcast(int sockfd){
-    send_str(sockfd,"BM");
-    int ack;
-    //Receive acknowledgement
-    if(recv(sockfd,&ack,sizeof(ack),0)==-1){
+    // Send broadcast command to server
+    send_str(sockfd, "BM");
+    cout << "Sent BM" << endl;
+    // Receive acknowledgement
+    /*int ack;
+    cout << "trying to receive?" << endl;
+    if (recv(sockfd, &ack, sizeof(ack), 0) == -1) {  
         perror("Receive acknowledgement error\n");
     }
+    cout << "HELLO??" << endl;
     ack = ntohl(ack);
-
-    if(ack == 1){
-        //Send message to the user
     
-	char msg[BUFSIZ];
-
-
-
+    cout << "Received ack num: " << ack << endl;*/
+    int ack = 0;  // TODO: how to get the ack number here if it is received in other thread?
+    if (ack == 1) {
+        // Send message to the user
+	    char msg[BUFSIZ];
         cout << ">Enter the public message: " << endl;
-    	scanf("%s", msg);
+        scanf("%s", msg);
 
-        if(send(sockfd,msg,strlen(msg) + 1,0)==-1){
+        if (send(sockfd, msg, strlen(msg) + 1, 0) == -1){
             perror("Error sending message\n");
-
         }
-       
-
-
     }
-
-    //cout << "Received ack num: " << ack << endl;
-    cout << "Broadcast message entered" << endl;
 }
 
 int print_active_users(int sockfd) {
@@ -121,7 +120,7 @@ int print_active_users(int sockfd) {
 	cout << "Number of users: " << n_users << endl; 
 
 	// Send ack to server 
-	int ack = (n_users >=0 ? 1 : -1); 
+	int ack = (n_users >= 0 ? 1 : -1); 
 	ack = htonl(ack);
 	if(send(sockfd, &ack, sizeof(ack), 0) == -1) {
 		perror("Error sending ack to server\n"); 
@@ -309,7 +308,7 @@ int main(int argc, char** argv) {
         }
     }
 
-	//TODO should the stuff above be a part of the main thread????
+	//TODO should the stuff above be a part of the main thread ????
     cout << "Connection established." << endl;  //FIXME: is this the right spot for this line?
 
     pthread_t thread;
