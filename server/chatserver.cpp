@@ -37,7 +37,6 @@ typedef struct {
 /*Broadcast*/
 void broadcast(int sockfd){
     int ack = htonl(1);
-    int i = 1;
     char msg[MAX_SIZE];
     //Send acknowledgment
     if(send(sockfd,&ack,sizeof(ack),0) ==-1 ){
@@ -52,10 +51,16 @@ void broadcast(int sockfd){
 
     
     //Send message to all clients
-   /*if(send(sockfd,msg,strlen(msg) + 1, 0)==-1){
-       perror("Error sending message from server \n");
-    }*/
-
+    for (auto const& user : ACTIVE_SOCKETS) {
+        if (user.first == sockfd) { //skip current user
+            continue; 
+        }
+        if(send(user.first, msg, sizeof(msg), 0) == -1) {
+            perror("Error sending message\n");
+            continue; 	
+        }
+    }	
+  
 
 
 }
