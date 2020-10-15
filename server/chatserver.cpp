@@ -78,7 +78,7 @@ void broadcast(int sockfd) {
  */ 
 bool send_msg(char type, int sockfd, char* msg, string error) {
 
-    if (type != 'D' && type != 'C') 
+    if (type != 'D' && type != 'C' && type != 'U') 
         return false;
 
     // Add type to front of message
@@ -114,7 +114,7 @@ void send_active_users(int sockfd) {
 	}
 
 	// Send active users to client 
-	if (!send_msg('D', sockfd, output, "Error sending active users to client")) 
+	if (!send_msg('U', sockfd, output, "Error sending active users to client")) 
     	return;  
 }
 
@@ -123,7 +123,9 @@ void send_active_users(int sockfd) {
  * otherwise, returns -1 
  */
 int is_active(char* username) {
+    cout << "usrname in is_active: " << username << endl;
 	for (auto const& user : ACTIVE_SOCKETS) {
+        cout << "key: " << user.first << " value: " << user.second << endl;
 		if (strcmp(user.second, username) == 0) {
 			return user.first;  
 		}
@@ -160,7 +162,8 @@ void private_message(int sockfd) {
     	
 	// Check that target user is active 
 	string ack; 
-	if (int target_sockfd = is_active(target) != -1) {
+    int target_sockfd = is_active(target);
+	if (target_sockfd != -1) {
 
 		cout << "Target sockfd: " << target_sockfd << endl; 
 
@@ -251,12 +254,13 @@ void *connection_handler(void *socket_desc)
 {
     // Add socket to map of active client sockets   
     int new_sockfd = *(int*) socket_desc;
+    cout << "In handle! " << new_sockfd << endl;
     ACTIVE_SOCKETS[new_sockfd] = NULL;
 
     char user[MAX_SIZE];
 	char* pubKey = getPubKey(); 
 
-	// Send username to server
+	// Receive username from client
     if (recv(new_sockfd, &user, sizeof(user), 0) ==-1){
         perror("Received username error\n");
     }
@@ -395,7 +399,10 @@ int main(int argc, char** argv) {
     while (1) {
 
         cout << "Waiting for connections on port " << port << endl;
-        if ((new_sockfd = accept(sockfd, (struct sockaddr*) &client_sock, &len)) < 0) {
+
+        new_sockfd = accept(sockfd, (struct sockaddr*) &client_sock, &len);
+        cout << "sock: " << new_sockfd << endl;        
+        if (new_sockfd < 0) {
 			cout << "exiting " << endl; 
             perror("Accept failed.");
 			cout << "exiting " << endl; 

@@ -70,11 +70,11 @@ void send_int(int sockfd, int command) {
     }
 }
 
-char* decode_msg(char* msg) {
+/*char* decode_msg(char* msg) {
 	char decoded_msg[MAX_SIZE]; 
 	strcpy(decoded_msg, msg + 1); 
 	return decoded_msg; 
-}
+}*/
 
 
 /* Threading */
@@ -91,16 +91,26 @@ void *handle_messages(void*) {
 		// Handle data message 
        	if (msg[0] == 'D') {   
             strcpy(decoded_msg, msg + 1); 
-            cout << decoded_msg << endl;
+            cout << "**** Incoming Private Message ****: " << decoded_msg << endl;
             // Acquire the lock 
 		    pthread_mutex_lock(&lock);
             ready = true;
         }
 		// Handle command message 
         else if (msg[0] == 'C') { 
-            strcpy(server_msg, decode_msg(msg));
+	        char decoded_msg[MAX_SIZE]; 
+	        strcpy(decoded_msg, msg + 1); 
+            strcpy(server_msg, decoded_msg);
             // Acquire the lock 
 		    pthread_mutex_lock(&lock);  //FIXME: duplicate; could move after if/else?
+            ready = true;
+        }
+        // Handle users list
+        else if (msg[0] == 'U') { 
+            strcpy(decoded_msg, msg + 1); 
+            cout << decoded_msg << endl;
+            // Acquire the lock 
+		    pthread_mutex_lock(&lock);
             ready = true;
         }
 		// Handle invalid message 
@@ -187,9 +197,13 @@ void private_message(int sockfd) {
 	//cout << "Server_msg: " << server_msg << endl;
 
 	// Get message from the user
+    string cpp_msg;
 	char message[MAX_SIZE]; 
 	cout << ">Enter the private message:"; 
-	cin >> message; 
+	//scanf("%s", message);
+    getline(cin, cpp_msg);
+    strcpy(message, cpp_msg.c_str());
+    cout << "echo: " << message << endl; 
 	
 	// Encrypt message 
 	
