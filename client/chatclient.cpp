@@ -29,6 +29,7 @@ int sockfd;
 // Thread condition variable and lock
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER; 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER; 
+bool ready = false;
 
 /* Helper Functions */ 
 void error(int code) {
@@ -63,20 +64,20 @@ void send_int(int sockfd, int command) {
 void *handle_messages(void*) {
     while (1) {  
 
-		// Aquire the lock 
-		pthread_mutex_lock(&lock);
-  
         // Receive message from server
         char msg[MAX_SIZE];
 		char decoded_msg[MAX_SIZE]; 
         if (recv(sockfd, &msg, sizeof(msg), 0) == -1) {
             perror("Receive message error \n");
         }
-
+	      
 		// Handle data message 
        	if (msg[0] == 'D') {   
             strcpy(decoded_msg, msg + 1); 
             cout << decoded_msg << endl;
+            // Acquire the lock 
+		    pthread_mutex_lock(&lock);
+            ready = true;
         }
 		// Handle command message 
         else if (msg[0] == 'C') { 
@@ -137,14 +138,12 @@ void private_message(int sockfd) {
 		
 	// Acquire lock
 	pthread_mutex_lock(&lock);
-    
+        
     // Sleep until active users are given 
-	pthread_cond_wait(&cond, &lock);
-
-	// Release lock
-	pthread_mutex_unlock(&lock); 
-
-	cout << "main thread woke up\n" << endl; 
+	while (!ready) {
+        cout << ready << endl;
+        pthread_cond_wait(&cond, &lock);
+    }
    
     // Prompt user to enter target user
 	char target[MAX_SIZE];
@@ -158,7 +157,8 @@ void private_message(int sockfd) {
 	}
 
 	// Release lock
-	//pthread_mutex_unlock(&lock); 
+    ready = false;
+	pthread_mutex_unlock(&lock);
 
 	// Get pubkey from server 
 	

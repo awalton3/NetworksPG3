@@ -180,9 +180,11 @@ void private_message(int sockfd) {
 	cout << "Target user: " << target << endl; 
 	
 	// Send public key to client
+    char* key = getPubKey();
+    send_msg('C', sockfd, key, "Error sending public key to client.");
 	
 	// Receive message to send 
-	
+    	
 	// Check if username exists
 	if (is_active(target)) {
 		//user exists 
