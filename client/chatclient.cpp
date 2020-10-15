@@ -7,6 +7,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -95,6 +96,7 @@ void *handle_messages(void*) {
             // Acquire the lock 
 		    pthread_mutex_lock(&lock);
             ready = true;
+            cout << "ready is now true" << endl;
         }
 		// Handle command message 
         else if (msg[0] == 'C') { 
@@ -120,10 +122,12 @@ void *handle_messages(void*) {
 
 		// Wake up sleeping threads 
 		pthread_cond_signal(&cond); 
-
+        
+        cout << "HI HI HI HI HI I AM AWAKE" << endl;
 		// Release lock 
 		pthread_mutex_unlock(&lock); 
-
+        
+        cout << "this is an example" << endl;
     } 
 
     return 0;
@@ -177,7 +181,8 @@ void private_message(int sockfd) {
     // Prompt user to enter target user
 	char target[MAX_SIZE];
    	cout << ">Peer to message: ";	
-	cin >> target; 
+	cin >> target;
+    cin.get(); 
 
 	// Sends username to server
 	if(send(sockfd, &target, sizeof(target), 0) == -1){
@@ -197,12 +202,12 @@ void private_message(int sockfd) {
 	//cout << "Server_msg: " << server_msg << endl;
 
 	// Get message from the user
-    string cpp_msg;
+    //string cpp_msg;
 	char message[MAX_SIZE]; 
 	cout << ">Enter the private message:"; 
 	//scanf("%s", message);
-    getline(cin, cpp_msg);
-    strcpy(message, cpp_msg.c_str());
+    fgets(message, MAX_SIZE, stdin);
+    //strcpy(message, cpp_msg.c_str());
     cout << "echo: " << message << endl; 
 	
 	// Encrypt message 
