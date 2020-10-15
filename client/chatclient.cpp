@@ -22,6 +22,8 @@
 
 using namespace std;
 
+//FIXME:improve error checking and returns after perrors
+
 /* Globals */ 
 int sockfd;
 typedef struct {
@@ -45,7 +47,7 @@ void send_str(int sockfd, string command) {
 	char commandF[BUFSIZ]; 
 	strcpy(commandF, command.c_str());  
 	if (send(sockfd, commandF, strlen(commandF) + 1, 0) == -1) {
-        perror("Error sending command to server."); 
+        perror("Error sending command to server."); // FIXME: return an int to show that it failed 
     }
 }
 
@@ -61,19 +63,23 @@ void send_int(int sockfd, int command) {
 /* Threading */
 void *handle_messages(void*) {
     while (1) {  //FIXME: change so that there is only one recv in here, and it parses out D vs. C for data and command messages
-        // Receive acknowledgement first 
-        int ack;
-        if (recv(sockfd, &ack, sizeof(ack), 0) == -1) {
-            perror("Receive acknowledgement error\n");
-        }
-        cout << "HELLO??" << endl;
-        ack = ntohl(ack);
-        // Receive BM message
+        // Receive message from server
         char msg[MAX_SIZE];
         if (recv(sockfd, &msg, sizeof(msg), 0) == -1) {
             perror("Receive message error \n");
         }
-        cout << "Message received: " << msg;
+        cout << msg << endl;
+        // Determine message type
+        if (msg[0] == 'D') {       // Data message
+            (*msg)++; 
+            cout << msg << endl;
+        }
+        else if (msg[0] == 'C') {  // Command message
+            //TODO: handle commands by setting global(s)
+        }
+        else {
+            cout << "Received corrupted message from server." << endl;
+        }
     } 
 
     return 0;
@@ -110,7 +116,7 @@ void broadcast(int sockfd){
 int print_active_users(int sockfd) {
 
 	// Receive number of users
-	int n_users; 
+	/*int n_users; 
 	if(recv(sockfd, &n_users, sizeof(n_users), 0) == -1) {
 		perror("Error receiving number of users"); 
 		return -1; 
@@ -127,12 +133,12 @@ int print_active_users(int sockfd) {
 		return -1; 
 	}
 
-	cout << "Sent ack" << endl; 
+	cout << "Sent ack" << endl; */
 
 	cout << "Peers online:\n"; 
 
 	// Receive active users from server 
-	for (int i = 0; i < n_users; ) {
+	/*for (int i = 0; i < n_users; ) {
 		char username[MAX_SIZE]; 
 		if (recv(sockfd, &username, sizeof(username), 0) == -1) {
 			perror("Error receiving username\n");
@@ -141,7 +147,7 @@ int print_active_users(int sockfd) {
 		cout << username << endl; 
 	}
 
-	return n_users; 
+	return n_users; */
 }
 
 void private_message(int sockfd) {
@@ -197,6 +203,8 @@ void exit_client(int sockfd) {
 
     // Close socket and leave
     close(sockfd);
+
+    //TODO: add pthread_join here to join threads
     exit(1); 
 }
 

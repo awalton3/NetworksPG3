@@ -34,6 +34,27 @@ typedef struct {
 	map<int, char*> active_sockets_map;
 } active_sockets_struct; 
 
+/* Helper Functions */
+
+/* Sends either a data or command message to the client
+ * type - should be D or C
+ * return true if the msg was sent successfully 
+ */ 
+bool send_msg(char type, int sockfd, char* msg, string error) {
+    if (type != 'D' && type != 'C') 
+        return false;
+    // Add type to front of message
+    char new_msg[MAX_SIZE];
+    sprintf(new_msg, "%c%s", type, msg); 
+    // Send message to client
+    if (send(sockfd, msg, strlen(msg) + 1, 0) == -1) {
+        cout << error << endl;
+        return false;
+    } 
+    return true;
+}
+
+
 /* Broadcast message to all clients */
 void broadcast(int sockfd) {
     cout << "Entered broadcast function " << endl;
@@ -73,8 +94,8 @@ void broadcast(int sockfd) {
 void send_active_users(int sockfd) {
 
 	// Send client size of active sockets list 
-	int n_users = ACTIVE_SOCKETS.size() - 1; //remove curr user
-	n_users = htonl(n_users); 
+	//int n_users = ACTIVE_SOCKETS.size() - 1; //remove curr user
+	/*n_users = htonl(n_users); 
 	if(send(sockfd, &n_users, sizeof(n_users),0) == -1) {
 		perror("Error sending list size\n"); 
 	}
@@ -87,17 +108,20 @@ void send_active_users(int sockfd) {
 	ack = ntohl(ack); 
 	if (ack == -1) {
 		cout << "An unknown error occurred\n"; 
-	}
+	}*/
 
 	// Send active usernames
 	for (auto const& user : ACTIVE_SOCKETS) {
-		if (user.first == sockfd) { //skip current user
+		if (user.first == sockfd) { // Skip current user
 			continue; 
 		}
-		if(send(sockfd, user.second, sizeof(user.second), 0) == -1) {
+        if (!send_msg('D', sockfd, user.second, "Error sending username to client")) 
+            continue;
+        
+		/*if(send(sockfd, user.second, sizeof(user.second), 0) == -1) {
 			perror("Error sending username\n");
 		   	continue; 	
-		}
+		}*/
 	}	
 }
 
