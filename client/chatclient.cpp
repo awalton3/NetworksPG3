@@ -44,12 +44,22 @@ void error(int code) {
     }
 }
 
-void send_str(int sockfd, string command) { 
+bool send_str(int sockfd, string command) { 
 	char commandF[BUFSIZ]; 
 	strcpy(commandF, command.c_str());  
 	if (send(sockfd, commandF, strlen(commandF) + 1, 0) == -1) {
-        perror("Error sending command to server."); // FIXME: return an int to show that it failed 
-    }
+        perror("Error sending command to server."); 
+		return false;     
+	}
+	return true; 
+}
+
+bool send_str(int sockfd, char* msg, string error) {
+	if (send(sockfd, msg, strlen(msg) + 1, 0) == -1) {
+        cout << error << endl; 
+		return false;     
+	}
+	return true; 
 }
 
 void send_int(int sockfd, int command) {
@@ -58,6 +68,12 @@ void send_int(int sockfd, int command) {
         perror("Error sending command to server."); 
         return;
     }
+}
+
+char* decode_msg(char* msg) {
+	char decoded_msg[MAX_SIZE]; 
+	strcpy(decoded_msg, msg + 1); 
+	return decoded_msg; 
 }
 
 
@@ -82,7 +98,7 @@ void *handle_messages(void*) {
         }
 		// Handle command message 
         else if (msg[0] == 'C') { 
-            strcpy(server_msg, server_msg);
+            strcpy(server_msg, decode_msg(msg));
             // Acquire the lock 
 		    pthread_mutex_lock(&lock);  //FIXME: duplicate; could move after if/else?
             ready = true;
@@ -163,25 +179,31 @@ void private_message(int sockfd) {
     ready = false;
 	pthread_mutex_unlock(&lock);
 
-	// Get pubkey from server 
+	// Sleep until pubkey is received  
     while (!ready) {
-        pthread_cond_wait(&cond, &lock); // Sleep until pubkey received
-    }    
-    cout << server_msg << endl;
+        pthread_cond_wait(&cond, &lock);
+	}    
+    
+	//cout << "Server_msg: " << server_msg << endl;
 
 	// Get message from the user
+	char message[MAX_SIZE]; 
+	cout << ">Enter the private message:"; 
+	cin >> message; 
 	
+	// Encrypt message 
+	
+	cout << "Pubkey: " << server_msg << endl; 
 
+	char* encrypt_msg = encrypt(message, server_msg);  
 
-	/*active_sockets_struct *active_users = new active_sockets_struct(); 
-	map<int, char*> buffer; 
-	active_users->active_sockets_map = buffer; 
+	cout << "Encrypted message: " << encrypt_msg << endl; 
 
-	if(recv(sockfd, (active_sockets_struct*) &active_users, sizeof(active_users), 0) == -1) {
-		perror("Error receiving active users from server\n"); 
-		return; 
-	} */ 
+	// Send message to server 
+	if(!send_str(sockfd, message, "Error sending private message to server"))
+		return;
 
+	cout << "Sent message to the server\n"; 
 }
 
 void exit_client(int sockfd) {

@@ -34,33 +34,7 @@ typedef struct {
 	map<int, char*> active_sockets_map;
 } active_sockets_struct; 
 
-/* Helper Functions */
-
-/* Sends either a data or command message to the client
- * type - should be D or C
- * return true if the msg was sent successfully 
- */ 
-bool send_msg(char type, int sockfd, char* msg, string error) {
-
-	cout << "In send_message \n" << endl; 
-
-    if (type != 'D' && type != 'C') 
-        return false;
-
-    // Add type to front of message
-    char new_msg[MAX_SIZE];
-    sprintf(new_msg, "%c%s", type, msg); 
-
-	//cout << new_msg << endl; 
-
-    // Send message to client
-    if (send(sockfd, new_msg, strlen(new_msg) + 1, 0) == -1) {
-        cout << error << endl;
-        return false;
-    } 
-    return true;
-}
-
+/* Server functionality methods */ 
 
 /* Broadcast message to all clients */
 void broadcast(int sockfd) {
@@ -93,52 +67,40 @@ void broadcast(int sockfd) {
             continue; 	
         }
     }	*/
-  
-
-
 }
 
+
+/* Helper Functions */
+
+/* Sends either a data or command message to the client
+ * type - should be D or C
+ * return true if the msg was sent successfully 
+ */ 
+bool send_msg(char type, int sockfd, char* msg, string error) {
+
+    if (type != 'D' && type != 'C') 
+        return false;
+
+    // Add type to front of message
+    char new_msg[MAX_SIZE];
+    sprintf(new_msg, "%c%s", type, msg); 
+
+    // Send message to client
+    if (send(sockfd, new_msg, strlen(new_msg) + 1, 0) == -1) {
+		perror("system error"); 
+        cout << error << endl;
+        return false;
+    } 
+    return true;
+}
+
+/* Sends a formatted list of all active users 
+ * returns nothing 
+ */
 void send_active_users(int sockfd) {
-
-	cout << "in send_active_users" << endl; 
-
-	// Send client size of active sockets list 
-	//int n_users = ACTIVE_SOCKETS.size() - 1; //remove curr user
-	/*n_users = htonl(n_users); 
-	if(send(sockfd, &n_users, sizeof(n_users),0) == -1) {
-		perror("Error sending list size\n"); 
-	}
-
-	// Receive ack from client 
-	int ack; 
-	if (recv(sockfd, &ack, sizeof(ack), 0) == -1) {
-		perror("Error receiving acknowledgement"); 
-	}
-	ack = ntohl(ack); 
-	if (ack == -1) {
-		cout << "An unknown error occurred\n"; 
-	}*/
-
-	// Send active usernames
-
-	//TODO tell client if there are no active users 
-	
-	/*for (auto const& user : ACTIVE_SOCKETS) {
-		if (user.first == sockfd) { // Skip current user
-			continue; 
-		}
-        if (!send_msg('D', sockfd, user.second, "Error sending username to client")) 
-            continue;
-        
-		if(send(sockfd, user.second, sizeof(user.second), 0) == -1) {
-			perror("Error sending username\n");
-		   	continue; 	
-		}
-	} 	*/ 
-
-	// Send active users in a formatted string 
 	char output[MAX_SIZE]; 
 	for (auto const& user : ACTIVE_SOCKETS) {
+
 		// Skip current user 
 		if (user.first == sockfd)
 			continue; 
@@ -156,13 +118,17 @@ void send_active_users(int sockfd) {
     	return;  
 }
 
+/* Searches for user in active users map structure
+ * returns the sockfd if the user is found 
+ * otherwise, returns -1 
+ */
 int is_active(char* username) {
 	for (auto const& user : ACTIVE_SOCKETS) {
 		if (strcmp(user.second, username) == 0) {
-			return 1;  
+			return user.first;  
 		}
 	}	
-	return 0;
+	return -1;
 }
 
 /* Private message */ 
@@ -177,24 +143,40 @@ void private_message(int sockfd) {
 		perror("Error receiving target username\n"); 
 	}
 
-	cout << "Target user: " << target << endl; 
-	
 	// Send public key to client
     char* key = getPubKey();
-    send_msg('C', sockfd, key, "Error sending public key to client.");
-	
-	// Receive message to send 
-    	
-	// Check if username exists
-	if (is_active(target)) {
-		//user exists 
-	} else {
-		//user does not exists	
+    if(!send_msg('C', sockfd, key, "Error sending public key to client.")) 
+		return; 
+		
+	// Receive private message to send 
+	char msg[MAX_SIZE]; 
+	if(recv(sockfd, &msg, sizeof(msg), 0) == -1) {
+		cout << "Error receiving private message\n"; 
 	}
-	
-	// Send message to target user 
-	
+
+	char* decrypted_msg = msg; 
+
+	cout << "private message to send: " << decrypted_msg << endl; 
+    	
+	// Check that target user is active 
+	string ack; 
+	if (int target_sockfd = is_active(target) != -1) {
+
+		cout << "Target sockfd: " << target_sockfd << endl; 
+
+		// Send message to target user 
+		if(!send_msg('D', target_sockfd, decrypted_msg, "Error sending private message to target user"))
+			return; 
+		ack = "1"; 
+	} else {
+		ack = "0"; 
+	}
+
 	// Send confirmation
+	char ack_fm[MAX_SIZE]; 
+	strcpy(ack_fm, ack.c_str()); 
+	if(!send_msg('C', sockfd, ack_fm, "Error sending confirmation"))
+		return;
 }
 
 /* Authenticate user */ 
