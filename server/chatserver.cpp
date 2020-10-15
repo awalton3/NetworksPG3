@@ -41,13 +41,20 @@ typedef struct {
  * return true if the msg was sent successfully 
  */ 
 bool send_msg(char type, int sockfd, char* msg, string error) {
+
+	cout << "In send_message \n" << endl; 
+
     if (type != 'D' && type != 'C') 
         return false;
+
     // Add type to front of message
     char new_msg[MAX_SIZE];
     sprintf(new_msg, "%c%s", type, msg); 
+
+	cout << new_msg << endl; 
+
     // Send message to client
-    if (send(sockfd, msg, strlen(msg) + 1, 0) == -1) {
+    if (send(sockfd, new_msg, strlen(new_msg) + 1, 0) == -1) {
         cout << error << endl;
         return false;
     } 
@@ -93,6 +100,8 @@ void broadcast(int sockfd) {
 
 void send_active_users(int sockfd) {
 
+	cout << "in send_active_users" << endl; 
+
 	// Send client size of active sockets list 
 	//int n_users = ACTIVE_SOCKETS.size() - 1; //remove curr user
 	/*n_users = htonl(n_users); 
@@ -111,6 +120,9 @@ void send_active_users(int sockfd) {
 	}*/
 
 	// Send active usernames
+
+	//TODO tell client if there are no active users 
+	
 	for (auto const& user : ACTIVE_SOCKETS) {
 		if (user.first == sockfd) { // Skip current user
 			continue; 
@@ -123,6 +135,9 @@ void send_active_users(int sockfd) {
 		   	continue; 	
 		}*/
 	}	
+
+
+
 }
 
 int is_active(char* username) {
@@ -136,6 +151,8 @@ int is_active(char* username) {
 
 /* Private message */ 
 void private_message(int sockfd) {
+
+	cout << "in private message\n" << endl; 
 
 	// Send active users to client 
 	send_active_users(sockfd); 

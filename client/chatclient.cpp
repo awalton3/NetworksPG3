@@ -63,16 +63,18 @@ void send_int(int sockfd, int command) {
 /* Threading */
 void *handle_messages(void*) {
     while (1) {  //FIXME: change so that there is only one recv in here, and it parses out D vs. C for data and command messages
+
         // Receive message from server
         char msg[MAX_SIZE];
+		char decoded_msg[MAX_SIZE]; 
         if (recv(sockfd, &msg, sizeof(msg), 0) == -1) {
             perror("Receive message error \n");
         }
-        cout << msg << endl;
+
         // Determine message type
         if (msg[0] == 'D') {       // Data message
-            (*msg)++; 
-            cout << msg << endl;
+            strcpy(decoded_msg, msg + 1); 
+            cout << decoded_msg << endl;
         }
         else if (msg[0] == 'C') {  // Command message
             //TODO: handle commands by setting global(s)
