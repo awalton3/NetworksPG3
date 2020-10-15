@@ -30,6 +30,7 @@ int sockfd;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER; 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER; 
 bool ready = false;
+char server_msg[MAX_SIZE] = {0};  // stores messages from server such as the pubkey
 
 /* Helper Functions */ 
 void error(int code) {
@@ -81,7 +82,10 @@ void *handle_messages(void*) {
         }
 		// Handle command message 
         else if (msg[0] == 'C') { 
-            
+            strcpy(server_msg, server_msg);
+            // Acquire the lock 
+		    pthread_mutex_lock(&lock);  //FIXME: duplicate; could move after if/else?
+            ready = true;
         }
 		// Handle invalid message 
         else {
@@ -141,7 +145,6 @@ void private_message(int sockfd) {
         
     // Sleep until active users are given 
 	while (!ready) {
-        cout << ready << endl;
         pthread_cond_wait(&cond, &lock);
     }
    
@@ -161,7 +164,11 @@ void private_message(int sockfd) {
 	pthread_mutex_unlock(&lock);
 
 	// Get pubkey from server 
-	
+    while (!ready) {
+        pthread_cond_wait(&cond, &lock); // Sleep until pubkey received
+    }    
+    cout << server_msg << endl;
+
 	// Get message from the user
 	
 
