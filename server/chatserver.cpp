@@ -51,7 +51,7 @@ bool send_msg(char type, int sockfd, char* msg, string error) {
     char new_msg[MAX_SIZE];
     sprintf(new_msg, "%c%s", type, msg); 
 
-	cout << new_msg << endl; 
+	//cout << new_msg << endl; 
 
     // Send message to client
     if (send(sockfd, new_msg, strlen(new_msg) + 1, 0) == -1) {
@@ -123,21 +123,37 @@ void send_active_users(int sockfd) {
 
 	//TODO tell client if there are no active users 
 	
-	for (auto const& user : ACTIVE_SOCKETS) {
+	/*for (auto const& user : ACTIVE_SOCKETS) {
 		if (user.first == sockfd) { // Skip current user
 			continue; 
 		}
         if (!send_msg('D', sockfd, user.second, "Error sending username to client")) 
             continue;
         
-		/*if(send(sockfd, user.second, sizeof(user.second), 0) == -1) {
+		if(send(sockfd, user.second, sizeof(user.second), 0) == -1) {
 			perror("Error sending username\n");
 		   	continue; 	
-		}*/
-	}	
+		}
+	} 	*/ 
 
+	// Send active users in a formatted string 
+	char output[MAX_SIZE]; 
+	for (auto const& user : ACTIVE_SOCKETS) {
+		// Skip current user 
+		if (user.first == sockfd)
+			continue; 
+		
+		// Append to output 
+		char temp[MAX_SIZE]; 
+		sprintf(temp, "%s\n", user.second); 
+		strcat(output, temp); 
 
+		//TODO appending an extra new line character
+	}
 
+	// Send active users to client 
+	if (!send_msg('D', sockfd, output, "Error sending active users to client")) 
+    	return;  
 }
 
 int is_active(char* username) {
@@ -151,8 +167,6 @@ int is_active(char* username) {
 
 /* Private message */ 
 void private_message(int sockfd) {
-
-	cout << "in private message\n" << endl; 
 
 	// Send active users to client 
 	send_active_users(sockfd); 
@@ -179,7 +193,6 @@ void private_message(int sockfd) {
 	// Send message to target user 
 	
 	// Send confirmation
-
 }
 
 /* Authenticate user */ 

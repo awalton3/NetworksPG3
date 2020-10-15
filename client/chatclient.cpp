@@ -61,8 +61,11 @@ void send_int(int sockfd, int command) {
 
 /* Threading */
 void *handle_messages(void*) {
-    while (1) {  //FIXME: change so that there is only one recv in here, and it parses out D vs. C for data and command messages
-        
+    while (1) {  
+
+		// Aquire the lock 
+		pthread_mutex_lock(&lock);
+  
         // Receive message from server
         char msg[MAX_SIZE];
 		char decoded_msg[MAX_SIZE]; 
@@ -70,17 +73,26 @@ void *handle_messages(void*) {
             perror("Receive message error \n");
         }
 
-        // Determine message type
-        if (msg[0] == 'D') {       // Data message
+		// Handle data message 
+       	if (msg[0] == 'D') {   
             strcpy(decoded_msg, msg + 1); 
             cout << decoded_msg << endl;
         }
-        else if (msg[0] == 'C') {  // Command message
-            //TODO: handle commands by setting global(s)
+		// Handle command message 
+        else if (msg[0] == 'C') { 
+            
         }
+		// Handle invalid message 
         else {
             cout << "Received corrupted message from server." << endl;
         }
+
+		// Wake up sleeping threads 
+		pthread_cond_signal(&cond); 
+
+		// Release lock 
+		pthread_mutex_unlock(&lock); 
+
     } 
 
     return 0;
@@ -117,36 +129,23 @@ void broadcast(int sockfd){
 
 void private_message(int sockfd) {
 
-	//TODO divide up and put in correct threads
-
 	// Send operation to server 
-	send_str(sockfd, "PM"); // TODO error check
+	send_str(sockfd, "PM"); 
 
+	// Prepare output for listing of active users 
     cout << "Peers online:" << endl;
-	
-	// Get active users from server 
-	//int n_users = print_active_users(sockfd); 
-	
-	/*active_sockets_struct *active_users = new active_sockets_struct(); 
-	map<int, char*> buffer; 
-	active_users->active_sockets_map = buffer; 
-
-	if(recv(sockfd, (active_sockets_struct*) &active_users, sizeof(active_users), 0) == -1) {
-		perror("Error receiving active users from server\n"); 
-		return; 
-	}
-
-	cout << "Received active user list: " << active_users << endl; 
-
-	for (auto const& user : active_users->active_sockets_map) {
-		cout << user.first << ": " << user.second; 
-	} */ 
-
+		
 	// Acquire lock
+	pthread_mutex_lock(&lock);
     
-    // Wait for receiving thread to signal
-    
-    
+    // Sleep until active users are given 
+	pthread_cond_wait(&cond, &lock);
+
+	// Release lock
+	pthread_mutex_unlock(&lock); 
+
+	cout << "main thread woke up\n" << endl; 
+   
     // Prompt user to enter target user
 	char target[MAX_SIZE];
    	cout << ">Peer to message: ";	
@@ -158,12 +157,24 @@ void private_message(int sockfd) {
 		return; 
 	}
 
-	cout << "Sent target user to server\n"; 
-
+	// Release lock
+	//pthread_mutex_unlock(&lock); 
 
 	// Get pubkey from server 
 	
 	// Get message from the user
+	
+
+
+	/*active_sockets_struct *active_users = new active_sockets_struct(); 
+	map<int, char*> buffer; 
+	active_users->active_sockets_map = buffer; 
+
+	if(recv(sockfd, (active_sockets_struct*) &active_users, sizeof(active_users), 0) == -1) {
+		perror("Error receiving active users from server\n"); 
+		return; 
+	} */ 
+
 }
 
 void exit_client(int sockfd) {
