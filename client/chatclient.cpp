@@ -26,10 +26,9 @@ using namespace std;
 
 /* Globals */ 
 int sockfd;
-typedef struct {
-	map<int, char*> active_sockets_map;
-} active_sockets_struct; 
-
+// Thread condition variable and lock
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER; 
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER; 
 
 /* Helper Functions */ 
 void error(int code) {
@@ -63,7 +62,7 @@ void send_int(int sockfd, int command) {
 /* Threading */
 void *handle_messages(void*) {
     while (1) {  //FIXME: change so that there is only one recv in here, and it parses out D vs. C for data and command messages
-
+        
         // Receive message from server
         char msg[MAX_SIZE];
 		char decoded_msg[MAX_SIZE]; 
@@ -115,42 +114,6 @@ void broadcast(int sockfd){
     }
 }
 
-int print_active_users(int sockfd) {
-
-	// Receive number of users
-	/*int n_users; 
-	if(recv(sockfd, &n_users, sizeof(n_users), 0) == -1) {
-		perror("Error receiving number of users"); 
-		return -1; 
-	}
-	n_users = ntohl(n_users); 
-
-	cout << "Number of users: " << n_users << endl; 
-
-	// Send ack to server 
-	int ack = (n_users >= 0 ? 1 : -1); 
-	ack = htonl(ack);
-	if(send(sockfd, &ack, sizeof(ack), 0) == -1) {
-		perror("Error sending ack to server\n"); 
-		return -1; 
-	}
-
-	cout << "Sent ack" << endl; */
-
-	cout << "Peers online:\n"; 
-
-	// Receive active users from server 
-	/*for (int i = 0; i < n_users; ) {
-		char username[MAX_SIZE]; 
-		if (recv(sockfd, &username, sizeof(username), 0) == -1) {
-			perror("Error receiving username\n");
-			return -1; 
-		}
-		cout << username << endl; 
-	}
-
-	return n_users; */
-}
 
 void private_message(int sockfd) {
 
@@ -158,9 +121,11 @@ void private_message(int sockfd) {
 
 	// Send operation to server 
 	send_str(sockfd, "PM"); // TODO error check
+
+    cout << "Peers online:" << endl;
 	
 	// Get active users from server 
-	int n_users = print_active_users(sockfd); 
+	//int n_users = print_active_users(sockfd); 
 	
 	/*active_sockets_struct *active_users = new active_sockets_struct(); 
 	map<int, char*> buffer; 
@@ -177,21 +142,23 @@ void private_message(int sockfd) {
 		cout << user.first << ": " << user.second; 
 	} */ 
 
-	// Prompt user to enter target user
-	if (n_users > 0) {
+	// Acquire lock
+    
+    // Wait for receiving thread to signal
+    
+    
+    // Prompt user to enter target user
+	char target[MAX_SIZE];
+   	cout << ">Peer to message: ";	
+	cin >> target; 
 
-		char target[MAX_SIZE];
-   		cout << ">Peer to message: ";	
-		cin >> target; 
-
-		// Sends username to server
-		if(send(sockfd, &target, sizeof(target), 0) == -1){
-			perror("Error sending recipient to server"); 
-			return; 
-		}
-
-		cout << "Sent target user to server\n"; 
+	// Sends username to server
+	if(send(sockfd, &target, sizeof(target), 0) == -1){
+		perror("Error sending recipient to server"); 
+		return; 
 	}
+
+	cout << "Sent target user to server\n"; 
 
 
 	// Get pubkey from server 
