@@ -37,45 +37,18 @@ typedef struct {
 /* Server functionality methods */ 
 
 /* Broadcast message to all clients */
-void broadcast(int sockfd) {
-    cout << "Entered broadcast function " << endl;
-    
-    int ack = htonl(1);
-    char msg[MAX_SIZE];
-    // Send acknowledgment
-    if (send(sockfd, &ack, sizeof(ack), 0) == -1) {
-        perror("Acknowledgement send error\n");
-    } 
-     
-    cout << "Sent ack" << endl;
-         
-    // Receive message
-    if (recv(sockfd, &msg, sizeof(msg), 0) == -1) {
-        perror("Receive message error\n");
-    } 
-    cout << "Message received: hello?" << msg;
-
-
-    
-    // Send message to all clients   // TODO: comment this part back in
-    /*for (auto const &user : ACTIVE_SOCKETS) {
-        if (user.first == sockfd) { //skip current user
-            continue; 
-        }
-        if(send(user.first, msg, sizeof(msg), 0) == -1) {
-            perror("Error sending message\n");
-            continue; 	
-        }
-    }	*/
-}
-
-
 /* Helper Functions */
 
 /* Sends either a data or command message to the client
  * type - should be D or C
  * return true if the msg was sent successfully 
- */ 
+ */
+
+/* Searches for user in active users map structure
+ * returns the sockfd if the user is found 
+ * otherwise, returns -1 
+ */
+//}
 bool send_msg(char type, int sockfd, char* msg, string error) {
 
     if (type != 'D' && type != 'C' && type != 'U') 
@@ -94,9 +67,7 @@ bool send_msg(char type, int sockfd, char* msg, string error) {
     return true;
 }
 
-/* Sends a formatted list of all active users 
- * returns nothing 
- */
+
 void send_active_users(int sockfd) {
 	char output[MAX_SIZE];
     bzero(output, MAX_SIZE);
@@ -123,10 +94,7 @@ void send_active_users(int sockfd) {
     	return;  
 }
 
-/* Searches for user in active users map structure
- * returns the sockfd if the user is found 
- * otherwise, returns -1 
- */
+
 int is_active(char* username) {
     cout << "usrname in is_active: " << username << endl;
 	for (auto const& user : ACTIVE_SOCKETS) {
@@ -136,6 +104,47 @@ int is_active(char* username) {
 		}
 	}	
 	return -1;
+    }
+void broadcast(int sockfd) {
+    cout << "Entered broadcast function " << endl;
+
+    
+    cout << "sent users to client!!" << endl; 
+  
+
+    // Receive message to send 
+    char msg[MAX_SIZE]; 
+    if(recv(sockfd, &msg, sizeof(msg), 0) == -1) {
+            cout << "Error receiving broadcast message\n"; 
+    }
+
+ 
+    cout << "broadcast message to send: " << msg << endl; 
+    
+ 
+    //Send message to all users
+
+    for (auto const& user : ACTIVE_SOCKETS) {
+
+        cout << "sock: " << user.first << "name: " << user.second << endl;
+
+		// Skip current user 
+		if (user.first == sockfd)
+			continue; 
+		
+		// Append to output 
+		char temp[MAX_SIZE]; 
+		sprintf(temp, "%s\n", user.second); 
+	
+
+        if(!send_msg('D', user.first, msg, "Error sending broadcast message to target user"))
+                    return; 
+
+		
+    }
+
+
+
 }
 
 /* Private message */ 
