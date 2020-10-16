@@ -31,6 +31,7 @@ int sockfd;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER; 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER; 
 bool ready = false;
+bool got_active_users = false; 
 char server_msg[MAX_SIZE] = {0};  // stores messages from server such as the pubkey
 char last_console[MAX_SIZE];
 
@@ -84,13 +85,13 @@ void *handle_messages(void*) {
     while (1) {  
 
         //cout << "start the whileee" << endl;
-
+	
         // Receive message from server
         char msg[MAX_SIZE];
         if (recv(sockfd, &msg, sizeof(msg), 0) == -1) {
             perror("Receive message error \n");
-        }
-	    
+        } 
+	
         //cout << "from server: " << msg << "###" << endl; 
         
         char decoded_msg[MAX_SIZE]; 
@@ -115,6 +116,7 @@ void *handle_messages(void*) {
         }
         // Handle users list
         else if (msg[0] == 'U') { 
+			got_active_users = true; 
             //cout << "receiving users" << endl;
             strcpy(decoded_msg, msg + 1); 
             cout << decoded_msg << endl;
@@ -133,8 +135,8 @@ void *handle_messages(void*) {
 		    pthread_cond_signal(&cond); 
         
             //cout << "HI HI HI HI HI I AM AWAKE" << endl;
-		
-            // Release lock 
+
+	        // Release lock 
 		    pthread_mutex_unlock(&lock); 
         }
         
@@ -175,6 +177,8 @@ void broadcast(int sockfd){
 
 void private_message(int sockfd) {
 
+	//cout << "Value at top: " << ready << endl; 
+
 	// Send operation to server 
 	send_str(sockfd, "PM"); 
 
@@ -186,8 +190,10 @@ void private_message(int sockfd) {
 
     //cout << "got the lock" << endl;
         
-    // Sleep until active users are given 
-	while (!ready) {
+    // Sleep until active users are given
+	//cout << ready << endl;  
+	while (!ready || !got_active_users) {
+		//cout << "In wait state\n"; 
         pthread_cond_wait(&cond, &lock);
     }
    
@@ -208,6 +214,7 @@ void private_message(int sockfd) {
 
 	// Release lock
     ready = false;  //TODO: comment out
+	//got_active_users = false; 
 	pthread_mutex_unlock(&lock);
 
     // Acquire lock
@@ -228,7 +235,6 @@ void private_message(int sockfd) {
     fgets(message, MAX_SIZE, stdin);
     
 	// Encrypt message 
-	
 	char* encrypt_msg = encrypt(message, server_msg);  
 
 	// Send message to server 
@@ -373,6 +379,7 @@ int main(int argc, char** argv) {
         cout << "> ";  
         strcpy(last_console, ">Please enter a command (BM: Broadcast Messaging, PM: Private Messaging, EX: Exit)\n> ");     
         cin >> op;
+		//cin.get(op, MAX_SIZE); 
         if (op == "PM") {
             private_message(sockfd);
         }
