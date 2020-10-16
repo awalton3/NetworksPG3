@@ -83,7 +83,7 @@ void send_int(int sockfd, int command) {
 void *handle_messages(void*) {
     while (1) {  
 
-        cout << "start the whileee" << endl;
+        //cout << "start the whileee" << endl;
 
         // Receive message from server
         char msg[MAX_SIZE];
@@ -91,7 +91,7 @@ void *handle_messages(void*) {
             perror("Receive message error \n");
         }
 	    
-        cout << "from server: " << msg << "###" << endl; 
+        //cout << "from server: " << msg << "###" << endl; 
         
         char decoded_msg[MAX_SIZE]; 
 		// Handle data message 
@@ -101,7 +101,7 @@ void *handle_messages(void*) {
             // Acquire the lock 
 		    pthread_mutex_lock(&lock);
             ready = true;
-            cout << "ready is now true" << endl;
+            //cout << "ready is now true" << endl;
             cout << last_console << endl;
         }
 		// Handle command message 
@@ -115,11 +115,12 @@ void *handle_messages(void*) {
         }
         // Handle users list
         else if (msg[0] == 'U') { 
-            cout << "receiving users" << endl;
+            //cout << "receiving users" << endl;
             strcpy(decoded_msg, msg + 1); 
             cout << decoded_msg << endl;
             // Acquire the lock 
 		    pthread_mutex_lock(&lock);
+            //cout << "I ACQUIRED LOCK>>" << endl;
             ready = true;
         }
 		// Handle invalid message 
@@ -131,7 +132,7 @@ void *handle_messages(void*) {
             // Wake up sleeping threads 
 		    pthread_cond_signal(&cond); 
         
-            cout << "HI HI HI HI HI I AM AWAKE" << endl;
+            //cout << "HI HI HI HI HI I AM AWAKE" << endl;
 		
             // Release lock 
 		    pthread_mutex_unlock(&lock); 
@@ -183,14 +184,14 @@ void private_message(int sockfd) {
 	// Acquire lock
 	pthread_mutex_lock(&lock);
 
-    cout << "got the lock" << endl;
+    //cout << "got the lock" << endl;
         
     // Sleep until active users are given 
 	while (!ready) {
         pthread_cond_wait(&cond, &lock);
     }
    
-    cout << "done waiting for active users " << endl;
+    //cout << "done waiting for active users " << endl;
 
     // Prompt user to enter target user
 	char target[MAX_SIZE];
@@ -206,8 +207,11 @@ void private_message(int sockfd) {
 	}
 
 	// Release lock
-    ready = false;
+    ready = false;  //TODO: comment out
 	pthread_mutex_unlock(&lock);
+
+    // Acquire lock
+	pthread_mutex_lock(&lock);
 
 	// Sleep until pubkey is received  
     while (!ready) {
@@ -230,6 +234,10 @@ void private_message(int sockfd) {
 	// Send message to server 
 	if(!send_str(sockfd, message, "Error sending private message to server"))
 		return;
+
+	// Release lock
+    ready = false;
+	pthread_mutex_unlock(&lock);
 
 }
 

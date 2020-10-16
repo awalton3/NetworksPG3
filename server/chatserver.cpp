@@ -98,8 +98,12 @@ bool send_msg(char type, int sockfd, char* msg, string error) {
  * returns nothing 
  */
 void send_active_users(int sockfd) {
-	char output[MAX_SIZE]; 
+	char output[MAX_SIZE];
+    bzero(output, MAX_SIZE);
+    cout << "output orig: " << output << endl;
 	for (auto const& user : ACTIVE_SOCKETS) {
+
+        cout << "sock: " << user.first << "name: " << user.second << endl;
 
 		// Skip current user 
 		if (user.first == sockfd)
@@ -112,8 +116,8 @@ void send_active_users(int sockfd) {
 
 		//TODO appending an extra new line character
 	}
-    
-    cout << "about to send users" << endl;
+     
+    cout << "about to send users ** " << output << endl;
 	// Send active users to client 
 	if (!send_msg('U', sockfd, output, "Error sending active users to client")) 
     	return;  
