@@ -112,7 +112,8 @@ void send_active_users(int sockfd) {
 
 		//TODO appending an extra new line character
 	}
-
+    
+    cout << "about to send users" << endl;
 	// Send active users to client 
 	if (!send_msg('U', sockfd, output, "Error sending active users to client")) 
     	return;  
@@ -137,7 +138,9 @@ int is_active(char* username) {
 void private_message(int sockfd) {
 
 	// Send active users to client 
-	send_active_users(sockfd); 
+	send_active_users(sockfd);
+    
+    cout << "sent users to client!!" << endl; 
 	
 	// Get target user
 	char target[MAX_SIZE]; 
@@ -175,11 +178,13 @@ void private_message(int sockfd) {
 		ack = "0"; 
 	}
 
-	// Send confirmation
-	char ack_fm[MAX_SIZE]; 
+	// Send confirmation  FIXME: add back in 
+	/*char ack_fm[MAX_SIZE]; 
 	strcpy(ack_fm, ack.c_str()); 
 	if(!send_msg('C', sockfd, ack_fm, "Error sending confirmation"))
 		return;
+
+    cout << "sent confirmation to the user!!" << endl;*/
 }
 
 /* Authenticate user */ 
@@ -305,10 +310,12 @@ void *connection_handler(void *socket_desc)
 
     // Listen for commands from client
     while (1) {
+        cout << "waiting for cmd from client..." << endl;
         char command[MAX_SIZE];
         if (recv(new_sockfd, &command, sizeof(command), 0) == -1) {
             perror("Error receving command from client");
         }
+        cout << "got " << command << " from client" << endl;
         if (strcmp(command, "BM") == 0) {
             broadcast(new_sockfd);
         }

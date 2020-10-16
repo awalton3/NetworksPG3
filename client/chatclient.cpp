@@ -32,6 +32,7 @@ pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER; 
 bool ready = false;
 char server_msg[MAX_SIZE] = {0};  // stores messages from server such as the pubkey
+char last_console[MAX_SIZE];
 
 /* Helper Functions */ 
 void error(int code) {
@@ -82,13 +83,17 @@ void send_int(int sockfd, int command) {
 void *handle_messages(void*) {
     while (1) {  
 
+        cout << "start the whileee" << endl;
+
         // Receive message from server
         char msg[MAX_SIZE];
-		char decoded_msg[MAX_SIZE]; 
         if (recv(sockfd, &msg, sizeof(msg), 0) == -1) {
             perror("Receive message error \n");
         }
-	      
+	    
+        cout << "from server: " << msg << "###" << endl; 
+        
+        char decoded_msg[MAX_SIZE]; 
 		// Handle data message 
        	if (msg[0] == 'D') {   
             strcpy(decoded_msg, msg + 1); 
@@ -97,6 +102,7 @@ void *handle_messages(void*) {
 		    pthread_mutex_lock(&lock);
             ready = true;
             cout << "ready is now true" << endl;
+            cout << last_console << endl;
         }
 		// Handle command message 
         else if (msg[0] == 'C') { 
@@ -109,6 +115,7 @@ void *handle_messages(void*) {
         }
         // Handle users list
         else if (msg[0] == 'U') { 
+            cout << "receiving users" << endl;
             strcpy(decoded_msg, msg + 1); 
             cout << decoded_msg << endl;
             // Acquire the lock 
@@ -120,14 +127,17 @@ void *handle_messages(void*) {
             cout << "Received corrupted message from server." << endl;
         }
 
-		// Wake up sleeping threads 
-		pthread_cond_signal(&cond); 
+		if (ready) {
+            // Wake up sleeping threads 
+		    pthread_cond_signal(&cond); 
         
-        cout << "HI HI HI HI HI I AM AWAKE" << endl;
-		// Release lock 
-		pthread_mutex_unlock(&lock); 
+            cout << "HI HI HI HI HI I AM AWAKE" << endl;
+		
+            // Release lock 
+		    pthread_mutex_unlock(&lock); 
+        }
         
-        cout << "this is an example" << endl;
+        //cout << "this is an example" << endl;
     } 
 
     return 0;
@@ -152,8 +162,8 @@ void broadcast(int sockfd){
     if (ack == 1) {
         // Send message to the user
 	    char msg[BUFSIZ];
-        cout << ">Enter the public message: " << endl;
-        scanf("%s", msg);
+        cout << ">Enter the public message: " << endl; 
+        scanf("%s", msg);   //FIXME: this will only get one word
 
         if (send(sockfd, msg, strlen(msg) + 1, 0) == -1){
             perror("Error sending message\n");
@@ -172,15 +182,20 @@ void private_message(int sockfd) {
 		
 	// Acquire lock
 	pthread_mutex_lock(&lock);
+
+    cout << "got the lock" << endl;
         
     // Sleep until active users are given 
 	while (!ready) {
         pthread_cond_wait(&cond, &lock);
     }
    
+    cout << "done waiting for active users " << endl;
+
     // Prompt user to enter target user
 	char target[MAX_SIZE];
-   	cout << ">Peer to message: ";	
+   	cout << ">Peer to message: ";
+    strcpy(last_console, ">Peer to message: ");    
 	cin >> target;
     cin.get(); 
 
@@ -205,24 +220,17 @@ void private_message(int sockfd) {
     //string cpp_msg;
 	char message[MAX_SIZE]; 
 	cout << ">Enter the private message:"; 
-	//scanf("%s", message);
+    strcpy(last_console, ">Enter the private message:");  
     fgets(message, MAX_SIZE, stdin);
-    //strcpy(message, cpp_msg.c_str());
-    cout << "echo: " << message << endl; 
-	
+    
 	// Encrypt message 
 	
-	cout << "Pubkey: " << server_msg << endl; 
-
 	char* encrypt_msg = encrypt(message, server_msg);  
-
-	cout << "Encrypted message: " << encrypt_msg << endl; 
 
 	// Send message to server 
 	if(!send_str(sockfd, message, "Error sending private message to server"))
 		return;
 
-	cout << "Sent message to the server\n"; 
 }
 
 void exit_client(int sockfd) {
@@ -294,7 +302,6 @@ int main(int argc, char** argv) {
 	if (recv(sockfd, &pubkey, sizeof(pubkey), 0) == -1) {
 		perror("Error receiving pubkey from server\n"); 
 	}
-	cout << "Received pubKey: " << pubkey << endl; 
 
 	char* pubKey = pubkey; 
 
@@ -355,7 +362,8 @@ int main(int argc, char** argv) {
             exit(-1);
         }
         cout << ">Please enter a command (BM: Broadcast Messaging, PM: Private Messaging, EX: Exit)" << endl;
-        cout << "> "; 
+        cout << "> ";  
+        strcpy(last_console, ">Please enter a command (BM: Broadcast Messaging, PM: Private Messaging, EX: Exit)\n> ");     
         cin >> op;
         if (op == "PM") {
             private_message(sockfd);
