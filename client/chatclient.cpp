@@ -91,7 +91,9 @@ void *handle_messages(void*) {
             perror("Receive message error \n");
         }
 	    
-        //cout << "from server: " << msg << "###" << endl; 
+        //cout << "from server: " << msg << "###" << endl;
+
+        printf("receivied message: %s\n",msg);
         
         char decoded_msg[MAX_SIZE]; 
 		// Handle data message 
@@ -145,33 +147,23 @@ void *handle_messages(void*) {
 }
 
 /* Client functionality */
-void broadcast(int sockfd){
-    // Send broadcast command to server
-    send_str(sockfd, "BM");
-    cout << "Sent BM" << endl;
-    // Receive acknowledgement
-    /*int ack;
-    cout << "trying to receive?" << endl;
-    if (recv(sockfd, &ack, sizeof(ack), 0) == -1) {  
-        perror("Receive acknowledgement error\n");
-    }
-    cout << "HELLO??" << endl;
-    ack = ntohl(ack);
-    
-    cout << "Received ack num: " << ack << endl;*/
-    int ack = 0;  // TODO: how to get the ack number here if it is received in other thread?
-    if (ack == 1) {
-        // Send message to the user
-	    char msg[BUFSIZ];
-        cout << ">Enter the public message: " << endl; 
-        scanf("%s", msg);   //FIXME: this will only get one word
+void broadcast(int sockfd){	// Send operation to server 
+	send_str(sockfd, "BM"); 
 
-        if (send(sockfd, msg, strlen(msg) + 1, 0) == -1){
-            perror("Error sending message\n");
-        }
-    }
+
+
+	char message[MAX_SIZE]; 
+	cout << ">Enter the message to broadcast:"; 
+        strcpy(last_console, ">Enter message to broadcast:");  
+        cin >> message;
+        
+        printf("message: %s\n", message);
+	// Send message to server 
+	if(!send_str(sockfd, message, "Error sending private message to server"))
+		return;
+
+	    ready = false;
 }
-
 
 void private_message(int sockfd) {
 
