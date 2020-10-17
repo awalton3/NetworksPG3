@@ -30,7 +30,9 @@ int sockfd;
 // Thread condition variable and lock
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER; 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER; 
+int i = 1;
 bool ready = false;
+bool ack_accepted = false;
 bool got_active_users = false; 
 char server_msg[MAX_SIZE] = {0};  // stores messages from server such as the pubkey
 char last_console[MAX_SIZE];
@@ -82,7 +84,25 @@ void send_int(int sockfd, int command) {
 
 /* Threading */
 void *handle_messages(void*) {
-    while (1) {  
+     while (1) { 
+        
+      /* int ack;
+       //If an acknowledgement hasn't been accepted yet
+         if(ack_accepted==false  ){
+           cout << "ack_accpeted "<< ack_accepted << endl;
+           printf("entered ack_accpeted\n");
+           if (recv(sockfd,&ack, sizeof(ack), 0) == -1) {
+               perror("Receive message error \n");
+           }
+           ack = ntohl(ack);
+           ack_accepted = true;
+        
+           printf("received ack : %d \n",ack);
+    
+       }*/
+      
+   
+
 
         //cout << "start the whileee" << endl;
 	
@@ -116,6 +136,18 @@ void *handle_messages(void*) {
             // Acquire the lock 
 		    pthread_mutex_lock(&lock);  //FIXME: duplicate; could move after if/else?
             ready = true;
+        }
+            //Handle broadcast message
+        else if(msg[0] == 'B'){
+            strcpy(decoded_msg, msg + 1); 
+            cout << "**** Incoming Public Message ****: " << decoded_msg << endl;
+            // Acquire the lock 
+		    pthread_mutex_lock(&lock);
+            ready = true;
+            //cout << "ready is now true" << endl;
+            cout << last_console << endl;
+
+
         }
         // Handle users list
         else if (msg[0] == 'U') { 
@@ -151,19 +183,32 @@ void *handle_messages(void*) {
 
 /* Client functionality */
 void broadcast(int sockfd){	// Send operation to server 
-	send_str(sockfd, "BM"); 
+    printf("entered broadcast function on client side\n");
+	send_str(sockfd, "BM");
+      /* int ack;
+       if (recv(sockfd,&ack, sizeof(ack), 0) == -1) {
+            perror("Receive message error \n");
+
+        }
+       ack = ntohl(ack);
+       printf("ack : %d \n",ack);*/
 
 
 
 	char message[MAX_SIZE]; 
+        //string message;
 	cout << ">Enter the message to broadcast:"; 
-        strcpy(last_console, ">Enter message to broadcast:");  
-        cin >> message;
+        strcpy(last_console, ">Enter message to broadcast:");
+        cin.get(); 
+        //cin >> message;
+        fgets(message,MAX_SIZE,stdin);
+        //getline(message,MAX_SIZE,stdin);
         
         printf("message: %s\n", message);
 	// Send message to server 
 	if(!send_str(sockfd, message, "Error sending private message to server"))
 		return;
+        printf("message you just sent: %s \n",message);
 
 	    ready = false;
 }
