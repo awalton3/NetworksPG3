@@ -31,7 +31,6 @@ int sockfd;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER; 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER; 
 bool ready = false;
-bool got_active_users = false; 
 char server_msg[MAX_SIZE] = {0};  // stores messages from server such as the pubkey
 char last_console[MAX_SIZE];
 
@@ -83,27 +82,32 @@ void send_int(int sockfd, int command) {
 /* Threading */
 void *handle_messages(void*) {
     while (1) {  
-
-        //cout << "start the whileee" << endl;
-	
+       	
         // Receive message from server
         char msg[MAX_SIZE];
         if (recv(sockfd, &msg, sizeof(msg), 0) == -1) {
             perror("Receive message error \n");
         } 
-	
-        //cout << "from server: " << msg << "###" << endl; 
-        
+	        
         char decoded_msg[MAX_SIZE]; 
 		// Handle data message 
-       	if (msg[0] == 'D') {   
-            strcpy(decoded_msg, msg + 1); 
-            cout << "**** Incoming Private Message ****: " << decoded_msg << endl;
-            // Acquire the lock 
-		    pthread_mutex_lock(&lock);
-            ready = true;
-            //cout << "ready is now true" << endl;
-            cout << last_console << endl;
+       	if (msg[0] == 'D') { 
+            /*for (int i = 1; i < MAX_SIZE; i++) {
+                decoded_msg[i - 1] = msg[i];
+            }*/
+            /*char* p = msg;
+            for (p; *p != '\0'; p++) {
+                *p = *(p + 1);
+            }
+            *p = '\0';*/
+            char* real_msg = msg;
+            real_msg++;
+            cout << msg << endl;
+            cout << "#######################" << endl;
+            cout << real_msg << endl;
+            //strcpy(decoded_msg, msg + 1); 
+			char * decrypted_msg = decrypt(real_msg);
+            cout << "**** Incoming Private Message ****: " << real_msg << endl;
         }
 		// Handle command message 
         else if (msg[0] == 'C') { 
@@ -116,13 +120,10 @@ void *handle_messages(void*) {
         }
         // Handle users list
         else if (msg[0] == 'U') { 
-			got_active_users = true; 
-            //cout << "receiving users" << endl;
             strcpy(decoded_msg, msg + 1); 
             cout << decoded_msg << endl;
             // Acquire the lock 
 		    pthread_mutex_lock(&lock);
-            //cout << "I ACQUIRED LOCK>>" << endl;
             ready = true;
         }
 		// Handle invalid message 
@@ -133,14 +134,10 @@ void *handle_messages(void*) {
 		if (ready) {
             // Wake up sleeping threads 
 		    pthread_cond_signal(&cond); 
-        
-            //cout << "HI HI HI HI HI I AM AWAKE" << endl;
-
+       
 	        // Release lock 
 		    pthread_mutex_unlock(&lock); 
         }
-        
-        //cout << "this is an example" << endl;
     } 
 
     return 0;
@@ -177,8 +174,6 @@ void broadcast(int sockfd){
 
 void private_message(int sockfd) {
 
-	//cout << "Value at top: " << ready << endl; 
-
 	// Send operation to server 
 	send_str(sockfd, "PM"); 
 
@@ -188,17 +183,11 @@ void private_message(int sockfd) {
 	// Acquire lock
 	pthread_mutex_lock(&lock);
 
-    //cout << "got the lock" << endl;
-        
     // Sleep until active users are given
-	//cout << ready << endl;  
-	while (!ready || !got_active_users) {
-		//cout << "In wait state\n"; 
+	while (!ready) {
         pthread_cond_wait(&cond, &lock);
     }
    
-    //cout << "done waiting for active users " << endl;
-
     // Prompt user to enter target user
 	char target[MAX_SIZE];
    	cout << ">Peer to message: ";
@@ -213,8 +202,7 @@ void private_message(int sockfd) {
 	}
 
 	// Release lock
-    ready = false;  //TODO: comment out
-	//got_active_users = false; 
+    ready = false; 	
 	pthread_mutex_unlock(&lock);
 
     // Acquire lock
@@ -225,10 +213,7 @@ void private_message(int sockfd) {
         pthread_cond_wait(&cond, &lock);
 	}    
     
-	//cout << "Server_msg: " << server_msg << endl;
-
 	// Get message from the user
-    //string cpp_msg;
 	char message[MAX_SIZE]; 
 	cout << ">Enter the private message:"; 
     strcpy(last_console, ">Enter the private message:");  
@@ -237,8 +222,10 @@ void private_message(int sockfd) {
 	// Encrypt message 
 	char* encrypt_msg = encrypt(message, server_msg);  
 
-	// Send message to server 
-	if(!send_str(sockfd, message, "Error sending private message to server"))
+	cout << encrypt_msg << endl; 
+
+    // Send message to server 
+	if(!send_str(sockfd, encrypt_msg, "Error sending private message to server"))
 		return;
 
 	// Release lock
@@ -290,8 +277,6 @@ int main(int argc, char** argv) {
     sock.sin_port = htons(port);
 
     /* Create the socket */
-    //int sockfd;
-    //socklen_t len = sizeof(sock);
     if ((sockfd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
         perror("Error creating socket.");
         return 1;
@@ -318,7 +303,6 @@ int main(int argc, char** argv) {
 	}
 
 	char* pubKey = pubkey; 
-
 
 	// Check if user is authenticated 
 	int isUser = 0; 

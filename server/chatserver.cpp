@@ -163,9 +163,7 @@ void private_message(int sockfd) {
 		cout << "Error receiving private message\n"; 
 	}
 
-	char* decrypted_msg = msg; 
-
-	cout << "private message to send: " << decrypted_msg << endl; 
+	cout << "private message to send: " << msg << endl; 
     	
 	// Check that target user is active 
 	string ack; 
@@ -175,7 +173,7 @@ void private_message(int sockfd) {
 		cout << "Target sockfd: " << target_sockfd << endl; 
 
 		// Send message to target user 
-		if(!send_msg('D', target_sockfd, decrypted_msg, "Error sending private message to target user"))
+		if(!send_msg('D', target_sockfd, msg, "Error sending private message to target user"))
 			return; 
 		ack = "1"; 
 	} else {
