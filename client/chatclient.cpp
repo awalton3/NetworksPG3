@@ -115,7 +115,7 @@ void *handle_messages(void*) {
 	    
         //cout << "from server: " << msg << "###" << endl;
 
-        printf("receivied message: %s\n",msg);
+        printf("received message: %s\n",msg);
 
         char decoded_msg[MAX_SIZE]; 
 		// Handle data message 
@@ -146,6 +146,28 @@ void *handle_messages(void*) {
             ready = true;
             //cout << "ready is now true" << endl;
             cout << last_console << endl;
+
+
+        }
+        else if(msg[0] == 'A'){
+            strcpy(decoded_msg, msg + 1); 
+            cout << "Ack received" << endl;
+            // Acquire the lock 
+	    pthread_mutex_lock(&lock);
+            ready = true;
+            //cout << "ready is now true" << endl;
+           // cout << last_console << endl;
+
+
+        }
+        else if(msg[0] == 'O'){
+            strcpy(decoded_msg, msg + 1); 
+            cout << "Confirmation received" << endl;
+            // Acquire the lock 
+	    pthread_mutex_lock(&lock);
+            ready = true;
+            //cout << "ready is now true" << endl;
+           // cout << last_console << endl;
 
 
         }

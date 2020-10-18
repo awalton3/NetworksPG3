@@ -52,7 +52,7 @@ int i = 1;
 //}
 bool send_msg(char type, int sockfd, char* msg, string error) {
 
-    if (type != 'D' && type != 'C' && type != 'U' && type !='B') 
+    if (type != 'D' && type != 'C' && type != 'U' && type !='B' && type!='A' && type!='O') 
         return false;
 
     // Add type to front of message
@@ -118,7 +118,9 @@ void broadcast(int sockfd) {
         ack_sent = true;
        // i = i + 1;
     }*/
-
+    
+    //Send acknowledgement
+        
 
     
     cout << "sent users to client!!" << endl; 
@@ -130,11 +132,14 @@ void broadcast(int sockfd) {
     if(recv(sockfd, &msg, sizeof(msg), 0) == -1) {
             cout << "Error receiving broadcast message\n"; 
     }
+     
+                
 
  
     cout << "broadcast message to send: " << msg << endl; 
     
- 
+     char acknowledgement[] = "AB";
+     char conf[]            = "OB";
     //Send message to all users
 
     for (auto const& user : ACTIVE_SOCKETS) {
@@ -147,14 +152,32 @@ void broadcast(int sockfd) {
 		
 		// Append to output 
 		char temp[MAX_SIZE]; 
-		sprintf(temp, "%s\n", user.second); 
-	
+		sprintf(temp, "%s\n", user.second);
 
-        if(!send_msg('B', user.first, msg, "Error sending broadcast message to target user"))
+            //First, send acknowledgement
+                   if(!send_msg('A', user.first, acknowledgement, "Error sending ack  message to  user"))
                     return; 
+                    cout << " ack sent " << endl;
 
-		
+            //Send message
+                    
+            if(!send_msg('B', user.first, msg, "Error sending broadcast message to user"))
+                    return;
+            cout << " finished sending message " << endl;
+            //Send confirmation that message was sent
+           
+            if(!send_msg('O', user.first, conf, "Error sending conf  message to  user"))
+                    cout << "error\n" << endl; 
+            cout << " confirmation sent " <<conf  << endl;
+            
+        
+          		
     }
+
+
+
+
+
         /*int conf = htonl(2);
         if(send(sockfd,&conf,sizeof(conf),0)==-1){
             perror("Acknowledgement send error\n");
