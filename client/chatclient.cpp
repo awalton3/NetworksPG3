@@ -90,7 +90,8 @@ void *handle_messages(void*) {
         if (recv(sockfd, &msg, sizeof(msg), 0) == -1) {
             perror("Receive message error \n");
         } 
-	        
+	cout << "received message: " << msg << endl; 
+        
         char decoded_msg[MAX_SIZE]; 
 		// Handle data message 
        	if (msg[0] == 'D') { 
@@ -127,7 +128,7 @@ void *handle_messages(void*) {
             //cout << "ready is now true" << endl;
             cout << last_console << endl;
         }
-        /*else if(msg[0] == 'A'){
+        else if(msg[0] == 'Z'){
             strcpy(decoded_msg, msg + 1); 
             cout << "Ack received" << endl;
             // Acquire the lock 
@@ -136,7 +137,7 @@ void *handle_messages(void*) {
             //cout << "ready is now true" << endl;
             // cout << last_console << endl;
         }
-        else if(msg[0] == 'O'){
+        else if(msg[0] == 'L'){
             strcpy(decoded_msg, msg + 1); 
             cout << "Confirmation received" << endl;
             // Acquire the lock 
@@ -144,7 +145,7 @@ void *handle_messages(void*) {
             ready = true;
             //cout << "ready is now true" << endl;
            // cout << last_console << endl;
-        }*/
+        }
         // Handle users list
         else if (msg[0] == 'U') { 
             strcpy(decoded_msg, msg + 1); 
@@ -155,6 +156,7 @@ void *handle_messages(void*) {
         }
 		// Handle invalid message 
         else {
+            cout << "msg received " << msg<< endl;
             cout << "Received corrupted message from server." << endl;
         }
 
