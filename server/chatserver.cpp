@@ -29,11 +29,11 @@ using namespace std;
 
 /* Global variables */
 map<int, char*> ACTIVE_SOCKETS;  // Keeps track of {active socket, username}
-bool ack_sent = false;
+
 typedef struct {
 	map<int, char*> active_sockets_map;
 } active_sockets_struct; 
-int i = 1;
+
 
 /* Server functionality methods */ 
 
@@ -112,89 +112,40 @@ int is_active(char* username) {
     }
 void broadcast(int sockfd) {
     cout << "Entered broadcast function " << endl;
-
-
-     char acknowledgement[] = "ZB";
-       
-        //First, send acknowledgement
-                    if(!send_msg('Z', sockfd, acknowledgement, "Error sending ack  message to  user"))
-                        return; 
-                    cout << " ack sent " << endl;
-
-
     
-    /*if(ack_sent = false){
-        cout << " ack_sent : " << ack_sent << endl;
-        int ack = htonl(1);
-        if(send(sockfd,&ack,sizeof(ack),0)==-1){
-            perror("Acknowledgement send error\n");
-        }
-        ack_sent = true;
-       // i = i + 1;
-    }*/
+    char acknowledgement[] = "ZB";
     
-    //Send acknowledgement
-        
-
+    //First, send acknowledgement
+    if(!send_msg('Z', sockfd, acknowledgement, "Error sending ack  message to  user"))
+        return; 
     
-    cout << "sent users to client!!" << endl; 
-  
-
     // Receive message to send 
+    
     char msg[MAX_SIZE]; 
     //string msg;
     if(recv(sockfd, &msg, sizeof(msg), 0) == -1) {
             cout << "Error receiving broadcast message\n"; 
     }
-     
-                
-
- 
-    cout << "broadcast message to send: " << msg << endl; 
     
-     char conf[]            = "LB";
+    char conf[]= "LB";
     //Send message to all users
 
     for (auto const& user : ACTIVE_SOCKETS) {
-
-        cout << "sock: " << user.first << "name: " << user.second << endl;
- 		// Skip current user 
-		if (user.first == sockfd){
-                 
-                    continue; 
-
-                }
-
-
-                
-                // Append to output 
-		char temp[MAX_SIZE]; 
-		sprintf(temp, "%s\n", user.second);
-            //Send message
-                    
-            if(!send_msg('B', user.first, msg, "Error sending broadcast message to user"))
-                    return;
-            cout << " finished sending message " << endl;
-            //Send confirmation that message was sent
-           
-            if(!send_msg('L', sockfd, conf, "Error sending conf  message to  user"))
-                    cout << "error\n" << endl; 
-            cout << " confirmation sent " <<conf  << endl;
-            
-        
-          		
+        // Skip current user 
+        if (user.first == sockfd){
+            continue; 
+        }
+        // Append to output 
+    	char temp[MAX_SIZE]; 
+    
+        sprintf(temp, "%s\n", user.second);
+        //Send message
+        if(!send_msg('B', user.first, msg, "Error sending broadcast message to user"))
+            return;
+        //Send confirmation that message was sent
+        if(!send_msg('L', sockfd, conf, "Error sending conf  message to  user"))
+            cout << "error\n" << endl; 
     }
-
-
-
-
-
-        /*int conf = htonl(2);
-        if(send(sockfd,&conf,sizeof(conf),0)==-1){
-            perror("Acknowledgement send error\n");
-        }*/
-
-
 
 }
 
