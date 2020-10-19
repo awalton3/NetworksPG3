@@ -29,6 +29,7 @@ using namespace std;
 
 /* Global variables */
 map<int, char*> ACTIVE_SOCKETS;  // Keeps track of {active socket, username}
+map<int, char*> CLIENT_KEYS; // Keeps track of {active socket, client pubkey}
 bool ack_sent = false;
 typedef struct {
 	map<int, char*> active_sockets_map;
@@ -202,8 +203,8 @@ void private_message(int sockfd) {
 	}
 
 	// Send public key to client
-    char* key = getPubKey();
-    if(!send_msg('C', sockfd, key, "Error sending public key to client.")) 
+    char* key = CLIENT_KEYS[sockfd];
+    if(!send_msg('C', sockfd, key, "Error sending user's public key to client.")) 
 		return; 
 		
 	// Receive private message to send 
@@ -238,13 +239,27 @@ void private_message(int sockfd) {
     cout << "sent confirmation to the user!!" << endl;*/
 }
 
+/* Return true if the input file exists */
+bool file_exist(char* filename) {
+	struct stat s;
+	if (stat(filename, &s) < 0) {
+		return false; 					    
+	}
+	return true; 		
+}
+
 /* Authenticate user */ 
 char* authenticate(char* username) {
 
-    //TODO: check if users.txt exists, and if not, create it
+    //Check if users.txt exists, and if not, create it
+	FILE *user_file; 
+	char filename[] = "users.txt"; 
+	if(!file_exist(filename)) {
+		user_file = fopen("users.txt", "w+"); 
+	} else {
+		user_file = fopen("users.txt", "r"); 
+	}
 
-	// Prepare to authenticate 
-	FILE *user_file = fopen("users.txt", "r");  // FIXME: This will give an error if the file does not already exist
 	if (!user_file) {
 		perror("Could not open users file\n"); 
 		exit(-1); 
@@ -358,6 +373,21 @@ void *connection_handler(void *socket_desc)
 
     // Add user to active socket map
     ACTIVE_SOCKETS[new_sockfd] = user;
+
+	// Send ack back to client
+	int ack = htonl(1); 
+	if (send(new_sockfd, &ack, sizeof(ack),0) == -1) {
+		perror("Error sending ack to client\n"); 
+	}
+
+	// Receive client pubkey
+	char client_pubkey[MAX_SIZE]; 
+	if (recv(new_sockfd, &client_pubkey, sizeof(client_pubkey), 0) == -1) {
+		perror("Error receiving client pubkey\n"); 
+	}
+	CLIENT_KEYS[new_sockfd] = client_pubkey; 
+
+	cout << CLIENT_KEYS[new_sockfd] << endl; 
 
     // Listen for commands from client
     while (1) {

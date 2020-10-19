@@ -116,6 +116,9 @@ void *handle_messages(void*) {
 	        char decoded_msg[MAX_SIZE]; 
 	        strcpy(decoded_msg, msg + 1); 
             strcpy(server_msg, decoded_msg);
+
+			cout << "Server_msg: " << server_msg << endl; 
+
             // Acquire the lock 
 		    pthread_mutex_lock(&lock);  //FIXME: duplicate; could move after if/else?
             ready = true;
@@ -252,7 +255,7 @@ void private_message(int sockfd) {
 	// Encrypt message 
 	char* encrypt_msg = encrypt(message, server_msg);  
 
-	cout << encrypt_msg << endl; 
+	cout << "Encrypt_msg: " << encrypt_msg << endl; 
 
     // Send message to server 
 	if(!send_str(sockfd, encrypt_msg, "Error sending private message to server"))
@@ -331,7 +334,6 @@ int main(int argc, char** argv) {
 	if (recv(sockfd, &pubkey, sizeof(pubkey), 0) == -1) {
 		perror("Error receiving pubkey from server\n"); 
 	}
-
 	char* pubKey = pubkey; 
 
 	// Check if user is authenticated 
@@ -379,8 +381,30 @@ int main(int argc, char** argv) {
         }
     }
 
-	//TODO should the stuff above be a part of the main thread ????
-    cout << "Connection established." << endl;  //FIXME: is this the right spot for this line?
+	// Receive ack from server
+	int ack = 0;  
+	if (recv(sockfd, &ack, sizeof(ack), 0) == -1) {
+	    perror("Error receiving ack"); 	
+	}      
+	ack = ntohl(ack); 
+
+	cout << ack << endl; 
+
+	if (ack != 1) {
+		perror("Acknowledgement failed\n"); 
+		return 1; 
+	}
+
+	// Send client pubkey to server
+	char* client_pubkey = getPubKey(); 
+	if(send(sockfd, client_pubkey, strlen(client_pubkey) + 1, 0) == -1) {
+		perror("Error sending pubkey to server"); 
+		return 1; 
+	}
+
+	cout << "pubkey sent: " << client_pubkey << endl; 
+
+    cout << "Connection established." << endl; 
 
     pthread_t thread;
     int rc = pthread_create(&thread, NULL, handle_messages, NULL);
