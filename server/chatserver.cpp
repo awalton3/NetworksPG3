@@ -54,8 +54,6 @@ bool ack_sent = false;
 //}
 bool send_msg(char type, int sockfd, char* msg, string error) {
 
-	//cout << "MESSAGE B4: " << msg << endl; 
-
     if (type != 'D' && type != 'C' && type != 'U' && type !='B' && type!='Z' && type!='L') 
         return false;
 
@@ -63,10 +61,6 @@ bool send_msg(char type, int sockfd, char* msg, string error) {
     char new_msg[MAX_SIZE];
     sprintf(new_msg, "%c%s", type, msg);
     
-    //new_msg[strlen(new_msg)] = '\0';
-    
-    //cout << "new msg: *" << new_msg <<"*"<< endl;
-
     // Send message to client
     if (send(sockfd, new_msg, strlen(new_msg) + 1, 0) == -1) {
 		perror("system error"); 
@@ -80,10 +74,7 @@ bool send_msg(char type, int sockfd, char* msg, string error) {
 void send_active_users(int sockfd) {
 	char output[MAX_SIZE];
     bzero(output, MAX_SIZE);
-    //cout << "output orig: " << output << endl;
-	for (auto const& user : ACTIVE_SOCKETS) {
-
-        //cout << "sock: " << user.first << "name: " << user.second << endl;
+  	for (auto const& user : ACTIVE_SOCKETS) {
 
 		// Skip current user 
 		if (user.first == sockfd)
@@ -97,26 +88,22 @@ void send_active_users(int sockfd) {
 		//TODO appending an extra new line character
 	}
      
-    //cout << "about to send users ** " << output << endl;
-	// Send active users to client 
+ 	// Send active users to client 
 	if (!send_msg('U', sockfd, output, "Error sending active users to client")) 
     	return;  
 }
 
 
 int is_active(char* username) {
-    //cout << "usrname in is_active: " << username << endl;
-	for (auto const& user : ACTIVE_SOCKETS) {
-        cout << "key: " << user.first << " value: " << user.second << endl;
-		if (strcmp(user.second, username) == 0) {
+   	for (auto const& user : ACTIVE_SOCKETS) {
+        if (strcmp(user.second, username) == 0) {
 			return user.first;  
 		}
 	}	
 	return -1;
     }
 void broadcast(int sockfd) {
-    cout << "Entered broadcast function " << endl;
-    
+       
     char acknowledgement[] = "ZB";
     
     //First, send acknowledgement
@@ -158,55 +145,42 @@ void private_message(int sockfd) {
 
 	// Send active users to client 
 	send_active_users(sockfd);
-    //cout << "sent active users to client!!" << endl; 
-	
+  	
 	// Get target user
 	char target[MAX_SIZE]; 
 	if(recv(sockfd, &target, sizeof(target), 0) == -1) {
 		perror("Error receiving target username\n"); 
 	}
-	//cout << "target user: " << target << endl; 
-
 
 	// Send public key to client
 	int target_sockfd = is_active(target); 
-    char* key = CLIENT_KEYS[target_sockfd];
-    if(!send_msg('C', sockfd, key, "Error sending user's public key to client.")) 
-		return;
-	//cout << "sent target user pubkey to client: " << key << endl; 
-	
+    string ack;
+    if (target_sockfd > 0) {
+        char* key = CLIENT_KEYS[target_sockfd];
+        if(!send_msg('C', sockfd, key, "Error sending user's public key to client.")) 
+		    return;	
 
-	// Receive private message to send 
-	char msg[MAX_SIZE]; 
-	//cout << "Buffer before recv: " << msg << endl; 
-	if(recv(sockfd, &msg, sizeof(msg), 0) == -1) {
-		cout << "Error receiving private message\n"; 
-	}
-	//cout << "private message to send: " << msg << endl; 
-    	
-	// Check that target user is active 
-	//string ack; 
-    //target_sockfd = is_active(target);
-	if (target_sockfd != -1) {
-
-		//cout << "Target sockfd: " << target_sockfd << endl; 
-
-		// Send message to target user 
+	    // Receive private message to send 
+	    char msg[MAX_SIZE]; 
+	    if (recv(sockfd, &msg, sizeof(msg), 0) == -1) {
+		    cout << "Error receiving private message\n"; 
+	    }
+         // Send message to target user 
 		if(!send_msg('D', target_sockfd, msg, "Error sending private message to target user"))
-			return; 
-
-		//ack = "1"; 
-	} else {
-		//ack = "0"; 
-	}
-
-	// Send confirmation  FIXME: add back in 
-	/*char ack_fm[MAX_SIZE]; 
+			return;     
+        // Set acknowledgement to true
+        ack = "1";
+    }
+    else {
+        ack = "0";
+    }
+    	
+	// Send confirmation
+	char ack_fm[MAX_SIZE]; 
 	strcpy(ack_fm, ack.c_str()); 
 	if(!send_msg('C', sockfd, ack_fm, "Error sending confirmation"))
 		return;
 
-    cout << "sent confirmation to the user!!" << endl;*/
 }
 
 /* Return true if the input file exists */
@@ -295,7 +269,6 @@ void *connection_handler(void *socket_desc)
 {
     // Add socket to map of active client sockets   
     int new_sockfd = *(int*) socket_desc;
-    //cout << "In handle! " << new_sockfd << endl;
     ACTIVE_SOCKETS[new_sockfd] = NULL;
 
     char user[MAX_SIZE];
@@ -305,8 +278,7 @@ void *connection_handler(void *socket_desc)
     if (recv(new_sockfd, &user, sizeof(user), 0) ==-1){
         perror("Received username error\n");
     }
-    //cout << "Received username : " << user << endl;
-
+  
 	// Send public key to client
 	if (send(new_sockfd, pubKey, strlen(pubKey) + 1, 0) == -1) {
         perror("Error sending public key to client");	
@@ -357,16 +329,12 @@ void *connection_handler(void *socket_desc)
 	}
 	CLIENT_KEYS[new_sockfd] = client_pubkey; 
 
-	//cout << CLIENT_KEYS[new_sockfd] << endl; 
-
     // Listen for commands from client
     while (1) {
-        cout << "waiting for cmd from client..." << endl;
         char command[MAX_SIZE];
         if (recv(new_sockfd, &command, sizeof(command), 0) == -1) {
             perror("Error receving command from client");
         }
-        cout << "got " << command << " from client" << endl;
         if (strcmp(command, "BM") == 0) {
             broadcast(new_sockfd);
         }
@@ -453,13 +421,12 @@ int main(int argc, char** argv) {
     struct sockaddr_in client_sock;
     socklen_t len = sizeof(client_sock);
     pthread_t thread_id;
-
+    
+    cout << "Wait for connection..." << endl;
     while (1) {
 
-        cout << "Waiting for connections on port " << port << endl;
-
         new_sockfd = accept(sockfd, (struct sockaddr*) &client_sock, &len);
-        cout << "sock: " << new_sockfd << endl;        
+             
         if (new_sockfd < 0) {
 			cout << "exiting " << endl; 
             perror("Accept failed.");
@@ -467,8 +434,7 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        cout << "Connection established." << endl;
-
+      
         if(pthread_create(&thread_id, NULL, connection_handler, (void*) &new_sockfd) < 0) {
             perror("could not create thread");
             return 1;
