@@ -32,9 +32,9 @@ map<int, char*> ACTIVE_SOCKETS;  // Keeps track of {active socket, username}
 map<int, char*> CLIENT_KEYS; // Keeps track of {active socket, client pubkey}
 bool ack_sent = false;
 
-typedef struct {
+/*typedef struct {
 	map<int, char*> active_sockets_map;
-} active_sockets_struct; 
+} active_sockets_struct; */ 
 
 
 /* Server functionality methods */ 
@@ -54,6 +54,8 @@ typedef struct {
 //}
 bool send_msg(char type, int sockfd, char* msg, string error) {
 
+	//cout << "MESSAGE B4: " << msg << endl; 
+
     if (type != 'D' && type != 'C' && type != 'U' && type !='B' && type!='Z' && type!='L') 
         return false;
 
@@ -63,7 +65,7 @@ bool send_msg(char type, int sockfd, char* msg, string error) {
     
     //new_msg[strlen(new_msg)] = '\0';
     
-    cout << "new msg: *" << new_msg <<"*"<< endl;
+    //cout << "new msg: *" << new_msg <<"*"<< endl;
 
     // Send message to client
     if (send(sockfd, new_msg, strlen(new_msg) + 1, 0) == -1) {
@@ -78,10 +80,10 @@ bool send_msg(char type, int sockfd, char* msg, string error) {
 void send_active_users(int sockfd) {
 	char output[MAX_SIZE];
     bzero(output, MAX_SIZE);
-    cout << "output orig: " << output << endl;
+    //cout << "output orig: " << output << endl;
 	for (auto const& user : ACTIVE_SOCKETS) {
 
-        cout << "sock: " << user.first << "name: " << user.second << endl;
+        //cout << "sock: " << user.first << "name: " << user.second << endl;
 
 		// Skip current user 
 		if (user.first == sockfd)
@@ -95,7 +97,7 @@ void send_active_users(int sockfd) {
 		//TODO appending an extra new line character
 	}
      
-    cout << "about to send users ** " << output << endl;
+    //cout << "about to send users ** " << output << endl;
 	// Send active users to client 
 	if (!send_msg('U', sockfd, output, "Error sending active users to client")) 
     	return;  
@@ -103,7 +105,7 @@ void send_active_users(int sockfd) {
 
 
 int is_active(char* username) {
-    cout << "usrname in is_active: " << username << endl;
+    //cout << "usrname in is_active: " << username << endl;
 	for (auto const& user : ACTIVE_SOCKETS) {
         cout << "key: " << user.first << " value: " << user.second << endl;
 		if (strcmp(user.second, username) == 0) {
@@ -145,7 +147,7 @@ void broadcast(int sockfd) {
         if(!send_msg('B', user.first, msg, "Error sending broadcast message to user"))
             return;
         //Send confirmation that message was sent
-        if(!send_msg('L', sockfd, conf, "Error sending conf  message to  user"))
+        if(!send_msg('L', sockfd, conf, "Error sending conf message to  user"))
             cout << "error\n" << endl; 
     }
 
@@ -156,41 +158,46 @@ void private_message(int sockfd) {
 
 	// Send active users to client 
 	send_active_users(sockfd);
-    
-    cout << "sent users to client!!" << endl; 
+    //cout << "sent active users to client!!" << endl; 
 	
 	// Get target user
 	char target[MAX_SIZE]; 
 	if(recv(sockfd, &target, sizeof(target), 0) == -1) {
 		perror("Error receiving target username\n"); 
 	}
+	//cout << "target user: " << target << endl; 
+
 
 	// Send public key to client
-    char* key = CLIENT_KEYS[sockfd];
+	int target_sockfd = is_active(target); 
+    char* key = CLIENT_KEYS[target_sockfd];
     if(!send_msg('C', sockfd, key, "Error sending user's public key to client.")) 
-		return; 
-		
+		return;
+	//cout << "sent target user pubkey to client: " << key << endl; 
+	
+
 	// Receive private message to send 
 	char msg[MAX_SIZE]; 
+	//cout << "Buffer before recv: " << msg << endl; 
 	if(recv(sockfd, &msg, sizeof(msg), 0) == -1) {
 		cout << "Error receiving private message\n"; 
 	}
-
-	cout << "private message to send: " << msg << endl; 
+	//cout << "private message to send: " << msg << endl; 
     	
 	// Check that target user is active 
-	string ack; 
-    int target_sockfd = is_active(target);
+	//string ack; 
+    //target_sockfd = is_active(target);
 	if (target_sockfd != -1) {
 
-		cout << "Target sockfd: " << target_sockfd << endl; 
+		//cout << "Target sockfd: " << target_sockfd << endl; 
 
 		// Send message to target user 
 		if(!send_msg('D', target_sockfd, msg, "Error sending private message to target user"))
 			return; 
-		ack = "1"; 
+
+		//ack = "1"; 
 	} else {
-		ack = "0"; 
+		//ack = "0"; 
 	}
 
 	// Send confirmation  FIXME: add back in 
@@ -288,7 +295,7 @@ void *connection_handler(void *socket_desc)
 {
     // Add socket to map of active client sockets   
     int new_sockfd = *(int*) socket_desc;
-    cout << "In handle! " << new_sockfd << endl;
+    //cout << "In handle! " << new_sockfd << endl;
     ACTIVE_SOCKETS[new_sockfd] = NULL;
 
     char user[MAX_SIZE];
@@ -298,7 +305,7 @@ void *connection_handler(void *socket_desc)
     if (recv(new_sockfd, &user, sizeof(user), 0) ==-1){
         perror("Received username error\n");
     }
-    cout << "Received username : " << user << endl;
+    //cout << "Received username : " << user << endl;
 
 	// Send public key to client
 	if (send(new_sockfd, pubKey, strlen(pubKey) + 1, 0) == -1) {
@@ -350,7 +357,7 @@ void *connection_handler(void *socket_desc)
 	}
 	CLIENT_KEYS[new_sockfd] = client_pubkey; 
 
-	cout << CLIENT_KEYS[new_sockfd] << endl; 
+	//cout << CLIENT_KEYS[new_sockfd] << endl; 
 
     // Listen for commands from client
     while (1) {

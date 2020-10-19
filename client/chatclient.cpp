@@ -59,6 +59,8 @@ bool send_str(int sockfd, string command) {
 }
 
 bool send_str(int sockfd, char* msg, string error) {
+	//cout << "sending string" << endl;
+   	//cout << "msg in send_str: " << msg << endl; 	
 	if (send(sockfd, msg, strlen(msg) + 1, 0) == -1) {
         cout << error << endl; 
 		return false;     
@@ -87,30 +89,26 @@ void *handle_messages(void*) {
        	
         // Receive message from server
         char msg[MAX_SIZE];
+		bzero(msg, MAX_SIZE); 
         if (recv(sockfd, &msg, sizeof(msg), 0) == -1) {
             perror("Receive message error \n");
         } 
-	cout << "received message: " << msg << endl; 
+
+		//cout << "received message: " << msg << endl; 
         
         char decoded_msg[MAX_SIZE]; 
+
 		// Handle data message 
        	if (msg[0] == 'D') { 
-            /*for (int i = 1; i < MAX_SIZE; i++) {
-                decoded_msg[i - 1] = msg[i];
-            }*/
-            /*char* p = msg;
-            for (p; *p != '\0'; p++) {
-                *p = *(p + 1);
-            }
-            *p = '\0';*/
             char* real_msg = msg;
             real_msg++;
-            cout << msg << endl;
-            cout << "#######################" << endl;
-            cout << real_msg << endl;
+            //cout << msg << endl;
+            //cout << "#######################" << endl;
+            //cout << real_msg << endl;
             //strcpy(decoded_msg, msg + 1); 
-			char * decrypted_msg = decrypt(real_msg);
-            cout << "**** Incoming Private Message ****: " << decrypted_msg << endl;
+			//char * decrypted_msg = decrypt(real_msg);
+
+            cout << "**** Incoming Private Message ****: " << real_msg << endl;
         }
 		// Handle command message 
         else if (msg[0] == 'C') { 
@@ -118,35 +116,34 @@ void *handle_messages(void*) {
 	        strcpy(decoded_msg, msg + 1); 
             strcpy(server_msg, decoded_msg);
 
-			cout << "Server_msg: " << server_msg << endl; 
+			//cout << "target user pubkey: " << server_msg << endl; 
 
             // Acquire the lock 
-		    pthread_mutex_lock(&lock);  //FIXME: duplicate; could move after if/else?
-            ready = true;
+		    pthread_mutex_lock(&lock); 
+			ready = true;
         }
-            //Handle broadcast message
+
+        //Handle broadcast message
         else if(msg[0] == 'B'){
             strcpy(decoded_msg, msg + 1); 
             cout << "**** Incoming Public Message ****: " << decoded_msg << endl;
-            //cout << "ready is now true" << endl;
-            ready = true;
             cout << last_console << endl;
         }
         else if(msg[0] == 'Z'){
             //Ack received
             strcpy(decoded_msg, msg + 1); 
             // Acquire the lock 
-	    pthread_mutex_lock(&lock);
-            ready = true;
+	    	//pthread_mutex_lock(&lock);
+            //ready = true;
             //cout << "ready is now true" << endl;
             // cout << last_console << endl;
         }
         else if(msg[0] == 'L'){
             //Confirmation received
             strcpy(decoded_msg, msg + 1); 
-                       // Acquire the lock 
-	        pthread_mutex_lock(&lock);
-            ready = true;
+            // Acquire the lock 
+	        //pthread_mutex_lock(&lock);
+            //ready = true;
             //cout << "ready is now true" << endl;
            // cout << last_console << endl;
         }
@@ -167,8 +164,7 @@ void *handle_messages(void*) {
 		if (ready) {
             // Wake up sleeping threads 
 		    pthread_cond_signal(&cond); 
-       
-	        // Release lock 
+	     	// Release lock 
 		    pthread_mutex_unlock(&lock); 
         }
     } 
@@ -179,26 +175,21 @@ void *handle_messages(void*) {
 /* Client functionality */
 void broadcast(int sockfd){	
     
-        // Send operation to server 
-
+    // Send operation to server 
 	send_str(sockfd, "BM");
    
-
 	char message[MAX_SIZE]; 
   	cout << ">Enter the message to broadcast:"; 
-        strcpy(last_console, ">Enter message to broadcast:");
-        cin.get(); 
+    strcpy(last_console, ">Enter message to broadcast:");
+    cin.get(); 
      
-        fgets(message,MAX_SIZE,stdin);
+    fgets(message,MAX_SIZE,stdin);
      
-        
-
 	// Send message to server 
 	if(!send_str(sockfd, message, "Error sending private message to server"))
 		return;
 
-
-	    ready = false;
+	//ready = false;
 }
 
 void private_message(int sockfd) {
@@ -221,14 +212,25 @@ void private_message(int sockfd) {
 	char target[MAX_SIZE];
    	cout << ">Peer to message: ";
     strcpy(last_console, ">Peer to message: ");    
-	cin >> target;
-    cin.get(); 
+	//cin >> target;
+	fgets(target, MAX_SIZE, stdin);
+	//fflush(stdin); 
+    //cin.get();
+	
+   	int len=strlen(target); 
+	if(target[len-1]=='\n')
+	    target[len-1]='\0';	
 
 	// Sends username to server
-	if(send(sockfd, &target, sizeof(target), 0) == -1){
+	//int n_sent = 0; 
+	if(send(sockfd, target, strlen(target) + 1, 0) == -1){
 		perror("Error sending recipient to server"); 
 		return; 
 	}
+
+	//cout << "Number of bytes supposed to send " << sizeof(target) << endl; 
+
+	
 
 	// Release lock
     ready = false; 	
@@ -246,15 +248,24 @@ void private_message(int sockfd) {
 	char message[MAX_SIZE]; 
 	cout << ">Enter the private message:"; 
     strcpy(last_console, ">Enter the private message:");  
+
+	char line[MAX_SIZE]; 
+
     fgets(message, MAX_SIZE, stdin);
+
+	fflush(stdin); 
+
+	len=strlen(message);
+	if(message[len-1]=='\n')
+		message[len-1]='\0';
     
 	// Encrypt message 
-	char* encrypt_msg = encrypt(message, server_msg);  
+	//char* encrypt_msg = encrypt(message, server_msg);  
 
-	cout << "Encrypt_msg: " << encrypt_msg << endl; 
+	//cout << "msg from stdin: " << message << endl; 
 
     // Send message to server 
-	if(!send_str(sockfd, encrypt_msg, "Error sending private message to server"))
+	if(!send_str(sockfd, message, "Error sending private message to server"))
 		return;
 
 	// Release lock
@@ -285,7 +296,6 @@ int main(int argc, char** argv) {
     int port = stoi(argv[2]);
     char* user = argv[3];
     struct stat statbuf;
-    string op;
        
     /* Translate host name into peer's IP address */
     struct hostent* hostIP = gethostbyname(host);
@@ -349,13 +359,20 @@ int main(int argc, char** argv) {
     // Get user password
 	char password[MAX_SIZE]; 
 	cout << "Enter password:"; 
-	scanf("%s", password);   
+	//scanf("%s", password);   
+	fgets(password, MAX_SIZE, stdin); 
+
+	int len=strlen(password);
+	if(password[len-1]=='\n')
+		password[len-1]='\0';
 
 	// Send password to server 
 	char* encrypted_password = encrypt(password, pubkey); 
 	if(send(sockfd, encrypted_password, strlen(encrypted_password) + 1, 0) == -1) {
         perror("Error sending password to server");
 	}
+
+	//cout << encrypted_password << endl; 
 
     if (isUser) { 
         // Verify password
@@ -368,7 +385,13 @@ int main(int argc, char** argv) {
                 break;  
 
             cout << "Incorrect password.  Please enter again:";
-            scanf("%s", password);
+            //scanf("%s", password);
+			fgets(password, MAX_SIZE, stdin); 
+
+			int len=strlen(password);
+			if(password[len-1]=='\n')
+				password[len-1]='\0';
+
             // Send new password back to server
             char* encrypted_password = encrypt(password, pubkey); 
 	        if (send(sockfd, encrypted_password, strlen(encrypted_password) + 1, 0) == -1) {
@@ -384,7 +407,7 @@ int main(int argc, char** argv) {
 	}      
 	ack = ntohl(ack); 
 
-	cout << ack << endl; 
+	//cout << ack << endl; 
 
 	if (ack != 1) {
 		perror("Acknowledgement failed\n"); 
@@ -398,12 +421,14 @@ int main(int argc, char** argv) {
 		return 1; 
 	}
 
-	cout << "pubkey sent: " << client_pubkey << endl; 
+	//cout << "pubkey sent: " << client_pubkey << endl; 
 
     cout << "Connection established." << endl; 
 
     pthread_t thread;
     int rc = pthread_create(&thread, NULL, handle_messages, NULL);
+
+	char op[MAX_SIZE]; 
     while(1){
         if(rc) {
             cout << "Error: unable to create thread" << endl;
@@ -412,16 +437,24 @@ int main(int argc, char** argv) {
         cout << ">Please enter a command (BM: Broadcast Messaging, PM: Private Messaging, EX: Exit)" << endl;
         cout << "> ";  
         strcpy(last_console, ">Please enter a command (BM: Broadcast Messaging, PM: Private Messaging, EX: Exit)\n> ");     
-        cin >> op;
+        //cin >> op;
 		//cin.get(op, MAX_SIZE); 
-        if (op == "PM") {
+		fgets(op, MAX_SIZE, stdin);
+
+		int len=strlen(op);
+		if(op[len-1]=='\n')
+			op[len-1]='\0';
+
+		//cout << "Operation: " << op << endl; 	
+
+        if (strcmp("PM", op) == 0) {
             private_message(sockfd);
         }
-        else if (op == "BM") {
+        else if (strcmp("BM", op) == 0) {
             broadcast(sockfd);
 
         }
-        else if (op == "EX") {
+        else if (strcmp("EX", op) == 0) {
             exit_client(sockfd);
         }
         else{
