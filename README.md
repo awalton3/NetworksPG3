@@ -1,4 +1,4 @@
-# NetworksPG3: ccolon2,awalton2,mzachlin
+# NetworksPG3: ccolon2,awalton3,mzachlin
 Creating a TCP Messaging system.
 
 FILES:
