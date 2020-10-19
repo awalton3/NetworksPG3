@@ -90,7 +90,8 @@ void *handle_messages(void*) {
         if (recv(sockfd, &msg, sizeof(msg), 0) == -1) {
             perror("Receive message error \n");
         } 
-	        
+	cout << "received message: " << msg << endl; 
+        
         char decoded_msg[MAX_SIZE]; 
 		// Handle data message 
        	if (msg[0] == 'D') { 
@@ -128,26 +129,27 @@ void *handle_messages(void*) {
             strcpy(decoded_msg, msg + 1); 
             cout << "**** Incoming Public Message ****: " << decoded_msg << endl;
             //cout << "ready is now true" << endl;
+            ready = true;
             cout << last_console << endl;
         }
-        /*else if(msg[0] == 'A'){
+        else if(msg[0] == 'Z'){
+            //Ack received
             strcpy(decoded_msg, msg + 1); 
-            cout << "Ack received" << endl;
             // Acquire the lock 
-	        pthread_mutex_lock(&lock);
+	    pthread_mutex_lock(&lock);
             ready = true;
             //cout << "ready is now true" << endl;
             // cout << last_console << endl;
         }
-        else if(msg[0] == 'O'){
+        else if(msg[0] == 'L'){
+            //Confirmation received
             strcpy(decoded_msg, msg + 1); 
-            cout << "Confirmation received" << endl;
-            // Acquire the lock 
+                       // Acquire the lock 
 	        pthread_mutex_lock(&lock);
             ready = true;
             //cout << "ready is now true" << endl;
            // cout << last_console << endl;
-        }*/
+        }
         // Handle users list
         else if (msg[0] == 'U') { 
             strcpy(decoded_msg, msg + 1); 
@@ -158,6 +160,7 @@ void *handle_messages(void*) {
         }
 		// Handle invalid message 
         else {
+            cout << "msg received " << msg<< endl;
             cout << "Received corrupted message from server." << endl;
         }
 
@@ -174,33 +177,26 @@ void *handle_messages(void*) {
 }
 
 /* Client functionality */
-void broadcast(int sockfd){	// Send operation to server 
-    printf("entered broadcast function on client side\n");
+void broadcast(int sockfd){	
+    
+        // Send operation to server 
+
 	send_str(sockfd, "BM");
-      /* int ack;
-       if (recv(sockfd,&ack, sizeof(ack), 0) == -1) {
-            perror("Receive message error \n");
-
-        }
-       ack = ntohl(ack);
-       printf("ack : %d \n",ack);*/
-
-
+   
 
 	char message[MAX_SIZE]; 
-        //string message;
-	cout << ">Enter the message to broadcast:"; 
+  	cout << ">Enter the message to broadcast:"; 
         strcpy(last_console, ">Enter message to broadcast:");
         cin.get(); 
-        //cin >> message;
+     
         fgets(message,MAX_SIZE,stdin);
-        //getline(message,MAX_SIZE,stdin);
+     
         
-        printf("message: %s\n", message);
+
 	// Send message to server 
 	if(!send_str(sockfd, message, "Error sending private message to server"))
 		return;
-        printf("message you just sent: %s \n",message);
+
 
 	    ready = false;
 }
